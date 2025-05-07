@@ -1,10 +1,10 @@
 // src/components/screens/LoginScreen.js
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
-import { colors, spacing, typography } from '../../../theme';
-import Input from '../../common/Input';
-import Button from '../../common/Button';
-import { useAuth } from '../../../hooks/useAuth';
+import { colors, spacing, typography } from '../../theme';
+import Input from '../common/Input';
+import Button from '../common/Button';
+import { useAuth } from '../../hooks/useAuth';
 
 const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
