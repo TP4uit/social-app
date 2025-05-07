@@ -1,18 +1,32 @@
+// src/components/screens/components/PostItem.js
 import React from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
-import { colors, spacing, typography } from '../../../theme';
+import { colors } from '../../../theme';
 
 const PostItem = ({ post }) => {
   // For demo purposes, assuming post has these properties
   const { author, content, createdAt, likes, comments, image } = post;
 
-  const formatDate = (dateString) => {
+  const formatTimestamp = (dateString) => {
+    // Simple relative time formatting
+    const now = new Date();
     const date = new Date(dateString);
-    return date.toLocaleDateString();
+    const diffMs = now - date;
+    const diffSec = Math.floor(diffMs / 1000);
+    const diffMin = Math.floor(diffSec / 60);
+    const diffHour = Math.floor(diffMin / 60);
+    const diffDay = Math.floor(diffHour / 24);
+
+    if (diffSec < 60) return 'just now';
+    if (diffMin < 60) return `${diffMin}m`;
+    if (diffHour < 24) return `${diffHour}h`;
+    if (diffDay < 7) return `${diffDay}d`;
+    return `${Math.floor(diffDay / 7)}w`;
   };
 
   return (
     <View style={styles.container}>
+      {/* Post Header */}
       <View style={styles.header}>
         <View style={styles.userInfo}>
           {author.avatar ? (
@@ -24,141 +38,154 @@ const PostItem = ({ post }) => {
               </Text>
             </View>
           )}
-          <View>
-            <Text style={styles.userName}>{author.name}</Text>
-            <Text style={styles.timestamp}>{formatDate(createdAt)}</Text>
-          </View>
+          <Text style={styles.username}>{author.name || 'username'}</Text>
         </View>
-        <TouchableOpacity style={styles.moreButton}>
-          <Text>•••</Text>
+        <TouchableOpacity>
+          <Text style={styles.moreIcon}>•••</Text>
         </TouchableOpacity>
       </View>
 
-      <Text style={styles.content}>{content}</Text>
-
+      {/* Post Image */}
       {image && (
         <Image source={{ uri: image }} style={styles.postImage} resizeMode="cover" />
       )}
 
-      <View style={styles.statsContainer}>
-        <View style={styles.stat}>
-          <Text style={styles.statCount}>{likes} likes</Text>
+      {/* Action Buttons */}
+      <View style={styles.actions}>
+        <View style={styles.leftActions}>
+          <TouchableOpacity style={styles.actionButton}>
+            <Text style={styles.actionIcon}>♥</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.actionButton}>
+            <Text style={styles.actionIcon}>💬</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.actionButton}>
+            <Text style={styles.actionIcon}>▶</Text>
+          </TouchableOpacity>
         </View>
-        <View style={styles.stat}>
-          <Text style={styles.statCount}>{comments.length} comments</Text>
-        </View>
+        <TouchableOpacity>
+          <Text style={styles.actionIcon}>🔖</Text>
+        </TouchableOpacity>
       </View>
 
-      <View style={styles.actionsContainer}>
-        <TouchableOpacity style={styles.actionButton}>
-          <Text style={styles.actionText}>Like</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.actionButton}>
-          <Text style={styles.actionText}>Comment</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.actionButton}>
-          <Text style={styles.actionText}>Share</Text>
-        </TouchableOpacity>
+      {/* Like Count */}
+      <Text style={styles.likes}>{likes} likes</Text>
+
+      {/* Caption */}
+      <View style={styles.captionContainer}>
+        <Text style={styles.caption}>
+          <Text style={styles.username}>{author.name} </Text>
+          {content}
+        </Text>
       </View>
+
+      {/* Comments */}
+      {comments.length > 0 && (
+        <TouchableOpacity style={styles.viewComments}>
+          <Text style={styles.viewCommentsText}>
+            View all {comments.length} comments
+          </Text>
+        </TouchableOpacity>
+      )}
+
+      {/* Timestamp */}
+      <Text style={styles.timestamp}>{formatTimestamp(createdAt)}</Text>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: colors.white,
-    borderRadius: 8,
-    marginBottom: spacing.md,
-    padding: spacing.md,
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    marginBottom: 8,
+    backgroundColor: '#ffffff',
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: spacing.sm,
+    justifyContent: 'space-between',
+    paddingHorizontal: 10,
+    height: 50,
   },
   userInfo: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginRight: spacing.sm,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    marginRight: 10,
   },
   avatarPlaceholder: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: spacing.sm,
+    marginRight: 10,
   },
   avatarText: {
-    color: colors.white,
+    color: '#ffffff',
     fontSize: 16,
     fontWeight: 'bold',
   },
-  userName: {
-    fontSize: typography.fontSize.md,
+  username: {
     fontWeight: 'bold',
-    color: colors.text,
+    fontSize: 13,
   },
-  timestamp: {
-    fontSize: typography.fontSize.sm,
-    color: colors.textSecondary,
-  },
-  moreButton: {
-    padding: spacing.xs,
-  },
-  content: {
-    fontSize: typography.fontSize.md,
-    color: colors.text,
-    marginBottom: spacing.md,
-    lineHeight: 22,
+  moreIcon: {
+    fontSize: 16,
+    fontWeight: 'bold',
   },
   postImage: {
     width: '100%',
-    height: 200,
-    borderRadius: 8,
-    marginBottom: spacing.md,
+    height: undefined,
+    aspectRatio: 1,
   },
-  statsContainer: {
+  actions: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: spacing.sm,
-    paddingBottom: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
   },
-  stat: {
+  leftActions: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  statCount: {
-    fontSize: typography.fontSize.sm,
-    color: colors.textSecondary,
-  },
-  actionsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
   },
   actionButton: {
-    paddingVertical: spacing.xs,
-    flex: 1,
-    alignItems: 'center',
+    marginRight: 16,
   },
-  actionText: {
-    fontSize: typography.fontSize.md,
-    color: colors.textSecondary,
-    fontWeight: '500',
+  actionIcon: {
+    fontSize: 24,
+  },
+  likes: {
+    fontWeight: 'bold',
+    fontSize: 13,
+    paddingHorizontal: 10,
+    marginBottom: 5,
+  },
+  captionContainer: {
+    paddingHorizontal: 10,
+    marginBottom: 5,
+  },
+  caption: {
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  viewComments: {
+    paddingHorizontal: 10,
+    marginBottom: 5,
+  },
+  viewCommentsText: {
+    color: '#8e8e8e',
+    fontSize: 13,
+  },
+  timestamp: {
+    color: '#8e8e8e',
+    fontSize: 11,
+    paddingHorizontal: 10,
+    marginBottom: 10,
   },
 });
 

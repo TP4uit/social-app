@@ -1,18 +1,64 @@
+// src/components/screens/FeedScreen.js
 import React, { useEffect, useState } from 'react';
-import { View, FlatList, StyleSheet, RefreshControl, Text, ActivityIndicator } from 'react-native';
+import { 
+  View, 
+  FlatList, 
+  StyleSheet, 
+  RefreshControl, 
+  Text, 
+  ActivityIndicator,
+  Image,
+  TouchableOpacity,
+  SafeAreaView,
+  Platform  // Added Platform import here
+} from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
 import { fetchPosts } from '../../redux/actions/postsActions';
-import { colors, spacing } from '../../theme';
+import { colors } from '../../theme';
 import PostItem from './components/PostItem';
-// Import dummy data for testing if API not available
-// import { dummyPosts } from '../../utils/dummyData';
+
+// Dummy stories data for the UI (we'll add this functionality later)
+const STORIES = [
+  { id: 'your-story', username: 'Your Story', avatar: null, hasStory: false, isYourStory: true },
+  { id: 'user1', username: 'karennn', avatar: 'https://randomuser.me/api/portraits/women/79.jpg', hasStory: true, isLive: true },
+  { id: 'user2', username: 'zackjohn', avatar: 'https://randomuser.me/api/portraits/men/86.jpg', hasStory: true },
+  { id: 'user3', username: 'kiero_d', avatar: 'https://randomuser.me/api/portraits/men/29.jpg', hasStory: true },
+  { id: 'user4', username: 'craig_love', avatar: 'https://randomuser.me/api/portraits/men/40.jpg', hasStory: true },
+];
+
+const StoryItem = ({ item }) => {
+  return (
+    <TouchableOpacity style={styles.storyContainer}>
+      <View style={[
+        styles.storyAvatarBorder, 
+        item.hasStory ? styles.hasStoryBorder : styles.noStoryBorder
+      ]}>
+        <View style={styles.storyAvatar}>
+          {item.avatar ? (
+            <Image source={{ uri: item.avatar }} style={styles.avatarImage} />
+          ) : (
+            <View style={styles.yourStoryPlus}>
+              <Text style={styles.plusText}>+</Text>
+            </View>
+          )}
+        </View>
+        {item.isLive && (
+          <View style={styles.liveIndicator}>
+            <Text style={styles.liveText}>LIVE</Text>
+          </View>
+        )}
+      </View>
+      <Text style={styles.storyUsername} numberOfLines={1}>
+        {item.isYourStory ? 'Your Story' : item.username}
+      </Text>
+    </TouchableOpacity>
+  );
+};
 
 const FeedScreen = () => {
   const dispatch = useDispatch();
   const { posts = [], loading, error, hasMore, page = 1 } = useSelector(state => state.posts || {});
   const [refreshing, setRefreshing] = useState(false);
-  // Use for testing if API not available
-  // const [localPosts, setLocalPosts] = useState(dummyPosts);
 
   useEffect(() => {
     loadPosts();
@@ -48,15 +94,26 @@ const FeedScreen = () => {
       setRefreshing(false);
     }
   };
+  
+  // Header component with stories
+  const ListHeaderComponent = () => (
+    <FlatList
+      horizontal
+      data={STORIES}
+      keyExtractor={item => item.id}
+      renderItem={({ item }) => <StoryItem item={item} />}
+      showsHorizontalScrollIndicator={false}
+      style={styles.storiesContainer}
+      contentContainerStyle={styles.storiesContent}
+    />
+  );
 
-  // Add safety check to ensure post has required properties
+  // Render single post
   const renderItem = ({ item }) => {
-    // Check if post has the minimum required properties
     if (!item || !item.author) {
       return null;
     }
     
-    // Make sure author has required fields
     const safeItem = {
       ...item,
       author: {
@@ -111,49 +168,185 @@ const FeedScreen = () => {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.headerLogo}>Social App</Text>
+        <View style={styles.headerRight}>
+          <TouchableOpacity style={styles.iconButton}>
+            <Text style={styles.addPostIcon}>+</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.iconButton, styles.messageIcon]}>
+            <Text style={styles.messageCount}>2</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
       <FlatList
         data={posts}
         renderItem={renderItem}
         keyExtractor={item => (item.id || Math.random().toString()).toString()}
-        contentContainerStyle={styles.listContentContainer}
+        ListHeaderComponent={ListHeaderComponent}
+        ListFooterComponent={renderFooter}
+        ListEmptyComponent={renderEmptyComponent}
+        onEndReached={loadMorePosts}
+        onEndReachedThreshold={0.5}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
         }
-        onEndReached={loadMorePosts}
-        onEndReachedThreshold={0.5}
-        ListFooterComponent={renderFooter}
-        ListEmptyComponent={renderEmptyComponent}
       />
-    </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: '#ffffff',
   },
-  listContentContainer: {
-    padding: spacing.md,
-    flexGrow: 1,
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 15,
+    height: 44,
+    borderBottomWidth: 0.5,
+    borderBottomColor: '#dbdbdb',
+  },
+  headerLogo: {
+    fontSize: 24,
+    fontWeight: '500',
+    fontFamily: Platform.OS === 'ios' ? 'Noteworthy' : 'normal',
+  },
+  headerRight: {
+    flexDirection: 'row',
+  },
+  iconButton: {
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 20,
+  },
+  addPostIcon: {
+    fontSize: 28,
+    marginTop: -5,
+  },
+  messageIcon: {
+    borderWidth: 1.5,
+    borderRadius: 12,
+    borderColor: '#262626',
+    transform: [{ rotate: '-20deg' }],
+  },
+  messageCount: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    backgroundColor: '#fe0000',
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '600',
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    textAlign: 'center',
+    overflow: 'hidden',
+  },
+  storiesContainer: {
+    borderBottomWidth: 0.5,
+    borderBottomColor: '#dbdbdb',
+  },
+  storiesContent: {
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+  },
+  storyContainer: {
+    alignItems: 'center',
+    marginHorizontal: 8,
+    width: 70,
+  },
+  storyAvatarBorder: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  hasStoryBorder: {
+    padding: 2,
+    borderWidth: 2,
+    borderColor: '#c837ab',
+    borderRadius: 36,
+  },
+  noStoryBorder: {},
+  storyAvatar: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#e0e0e0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'white',
+  },
+  avatarImage: {
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+  },
+  yourStoryPlus: {
+    backgroundColor: '#0095f6',
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    borderWidth: 2,
+    borderColor: 'white',
+  },
+  plusText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  liveIndicator: {
+    position: 'absolute',
+    bottom: -3,
+    backgroundColor: '#ff0000',
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+    borderRadius: 3,
+    borderWidth: 1.5,
+    borderColor: 'white',
+  },
+  liveText: {
+    color: 'white',
+    fontSize: 8,
+    fontWeight: 'bold',
+  },
+  storyUsername: {
+    fontSize: 12,
+    textAlign: 'center',
+    maxWidth: 64,
   },
   footerLoader: {
-    paddingVertical: spacing.lg,
+    paddingVertical: 20,
     alignItems: 'center',
   },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: spacing.lg,
-    marginTop: 100,
+    paddingHorizontal: 15,
+    marginTop: 50,
   },
   emptyText: {
     fontSize: 18,
     fontWeight: 'bold',
     color: colors.text,
-    marginBottom: spacing.sm,
+    marginBottom: 8,
   },
   emptySubText: {
     fontSize: 14,

@@ -1,45 +1,91 @@
 // src/components/screens/ProfileScreen.js
 import React from 'react';
-import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity } from 'react-native';
-import { colors, spacing, typography } from '../../theme';
-import Button from '../common/Button';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  Image, 
+  TouchableOpacity, 
+  SafeAreaView,
+  FlatList,
+  Dimensions,
+  Platform  // Added Platform import here
+} from 'react-native';
+import { colors } from '../../theme';
 import { useAuth } from '../../hooks/useAuth';
 
-const ProfileScreen = () => {
+// Mock data for grid posts
+const GRID_POSTS = [
+  { id: '1', image: 'https://picsum.photos/id/10/500/500' },
+  { id: '2', image: 'https://picsum.photos/id/11/500/500' },
+  { id: '3', image: 'https://picsum.photos/id/12/500/500' },
+  { id: '4', image: 'https://picsum.photos/id/13/500/500' },
+  { id: '5', image: 'https://picsum.photos/id/14/500/500' },
+  { id: '6', image: 'https://picsum.photos/id/15/500/500' },
+  { id: '7', image: 'https://picsum.photos/id/16/500/500' },
+  { id: '8', image: 'https://picsum.photos/id/17/500/500' },
+  { id: '9', image: 'https://picsum.photos/id/18/500/500' },
+];
+
+// Mock data for highlights
+const HIGHLIGHTS = [
+  { id: 'new', title: 'New', isAdd: true },
+  { id: '1', title: 'Friends', image: 'https://picsum.photos/id/20/200/200' },
+  { id: '2', title: 'Sport', image: 'https://picsum.photos/id/21/200/200' },
+  { id: '3', title: 'Design', image: 'https://picsum.photos/id/22/200/200' },
+];
+
+const { width } = Dimensions.get('window');
+const POST_SIZE = width / 3;
+
+const ProfileScreen = ({ navigation }) => {
   const { user, logout } = useAuth();
   
   // Placeholder data if user is not available yet
   const userData = user || {
-    name: 'John Doe',
-    email: 'john.doe@example.com',
-    bio: 'Software developer and React Native enthusiast',
-    posts: 42,
-    followers: 568,
-    following: 235
+    name: 'Jacob West',
+    username: 'jacob_w',
+    bio: 'Digital goodies designer @pixsellz\nEverything is designed.',
+    website: 'pixsellz.io',
+    posts: 54,
+    followers: 834,
+    following: 162
   };
   
-  const handleLogout = async () => {
-    try {
-      await logout();
-    } catch (error) {
-      console.log('Logout error:', error);
-    }
-  };
-  
-  return (
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.profileImageContainer}>
-          <View style={styles.profileImage}>
-            <Text style={styles.profileInitial}>
-              {userData.name.charAt(0).toUpperCase()}
-            </Text>
+  const HighlightItem = ({ item }) => (
+    <TouchableOpacity style={styles.highlightItem}>
+      <View style={styles.highlightCircle}>
+        {item.isAdd ? (
+          <View style={styles.addHighlightButton}>
+            <Text style={styles.addHighlightIcon}>+</Text>
           </View>
+        ) : (
+          <Image 
+            source={{ uri: item.image }} 
+            style={styles.highlightImage} 
+          />
+        )}
+      </View>
+      <Text style={styles.highlightTitle} numberOfLines={1}>{item.title}</Text>
+    </TouchableOpacity>
+  );
+
+  const GridItem = ({ item }) => (
+    <TouchableOpacity style={styles.gridItem}>
+      <Image source={{ uri: item.image }} style={styles.gridImage} />
+    </TouchableOpacity>
+  );
+
+  const renderHeader = () => (
+    <View>
+      {/* Profile Header */}
+      <View style={styles.profileHeader}>
+        <View style={styles.profileImageContainer}>
+          <Image 
+            source={{ uri: userData.avatar || 'https://picsum.photos/id/1025/500/500' }} 
+            style={styles.profileImage}
+          />
         </View>
-        
-        <Text style={styles.name}>{userData.name}</Text>
-        <Text style={styles.email}>{userData.email}</Text>
-        <Text style={styles.bio}>{userData.bio}</Text>
         
         <View style={styles.statsContainer}>
           <View style={styles.statItem}>
@@ -55,141 +101,245 @@ const ProfileScreen = () => {
             <Text style={styles.statLabel}>Following</Text>
           </View>
         </View>
-        
-        <View style={styles.actionContainer}>
-          <Button 
-            title="Edit Profile" 
-            type="secondary" 
-            style={styles.editButton}
-          />
-        </View>
       </View>
       
-      <View style={styles.sectionContainer}>
-        <Text style={styles.sectionTitle}>Your Posts</Text>
-        {/* Posts content would go here */}
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>No posts yet</Text>
-        </View>
+      {/* Profile Info */}
+      <View style={styles.profileInfo}>
+        <Text style={styles.userName}>{userData.name}</Text>
+        <Text style={styles.userBio}>{userData.bio}</Text>
       </View>
       
-      <TouchableOpacity 
-        style={styles.logoutButton}
-        onPress={handleLogout}
-      >
-        <Text style={styles.logoutText}>Logout</Text>
+      {/* Edit Profile Button */}
+      <TouchableOpacity style={styles.editProfileButton}>
+        <Text style={styles.editProfileText}>Edit Profile</Text>
       </TouchableOpacity>
-    </ScrollView>
+      
+      {/* Story Highlights */}
+      <FlatList
+        data={HIGHLIGHTS}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => <HighlightItem item={item} />}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.highlightsContainer}
+        contentContainerStyle={styles.highlightsContent}
+      />
+      
+      {/* Tab Header */}
+      <View style={styles.tabHeader}>
+        <TouchableOpacity style={[styles.tabButton, styles.activeTab]}>
+          <Text style={styles.tabIcon}>□</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.tabButton}>
+          <Text style={styles.tabIcon}>○</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
+  return (
+    <SafeAreaView style={styles.container}>
+      {/* Top Navigation */}
+      <View style={styles.navBar}>
+        <View style={styles.leftNavSection}>
+          <TouchableOpacity style={styles.lock}>
+            <Text>🔒</Text>
+          </TouchableOpacity>
+          <Text style={styles.username}>{userData.username}</Text>
+          <Text style={styles.dropdownIcon}>▼</Text>
+        </View>
+        <View style={styles.rightNavSection}>
+          <TouchableOpacity style={styles.navButton}>
+            <Text>➕</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.navButton} onPress={() => {}}>
+            <Text>☰</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+      
+      {/* Post Grid */}
+      <FlatList
+        data={GRID_POSTS}
+        renderItem={({ item }) => <GridItem item={item} />}
+        keyExtractor={(item) => item.id}
+        numColumns={3}
+        ListHeaderComponent={renderHeader}
+        showsVerticalScrollIndicator={false}
+      />
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: '#fff',
   },
-  header: {
-    backgroundColor: colors.white,
-    padding: spacing.lg,
+  navBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    height: 44,
+    paddingHorizontal: 15,
+    borderBottomWidth: 0.5,
+    borderBottomColor: '#dbdbdb',
+  },
+  leftNavSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  rightNavSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  lock: {
+    marginRight: 5,
+  },
+  username: {
+    fontWeight: '600',
+    fontSize: 16,
+    marginRight: 5,
+  },
+  dropdownIcon: {
+    fontSize: 12,
+  },
+  navButton: {
+    marginLeft: 20,
+  },
+  profileHeader: {
+    flexDirection: 'row',
+    paddingHorizontal: 15,
+    paddingVertical: 15,
   },
   profileImageContainer: {
-    marginBottom: spacing.md,
+    marginRight: 25,
   },
   profileImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  profileInitial: {
-    fontSize: 40,
-    color: colors.white,
-    fontWeight: 'bold',
-  },
-  name: {
-    fontSize: typography.fontSize.xl,
-    fontWeight: 'bold',
-    color: colors.text,
-    marginBottom: spacing.xs,
-  },
-  email: {
-    fontSize: typography.fontSize.md,
-    color: colors.textSecondary,
-    marginBottom: spacing.sm,
-  },
-  bio: {
-    fontSize: typography.fontSize.md,
-    color: colors.text,
-    textAlign: 'center',
-    marginBottom: spacing.md,
+    width: 86,
+    height: 86,
+    borderRadius: 43,
+    borderWidth: 0.5,
+    borderColor: '#dbdbdb',
   },
   statsContainer: {
+    flex: 1,
     flexDirection: 'row',
     justifyContent: 'space-around',
-    width: '100%',
-    marginBottom: spacing.md,
-    paddingVertical: spacing.md,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: colors.border,
+    alignItems: 'center',
   },
   statItem: {
     alignItems: 'center',
   },
   statValue: {
-    fontSize: typography.fontSize.lg,
+    fontSize: 16,
     fontWeight: 'bold',
-    color: colors.text,
   },
   statLabel: {
-    fontSize: typography.fontSize.sm,
-    color: colors.textSecondary,
+    fontSize: 13,
+    color: '#262626',
   },
-  actionContainer: {
-    flexDirection: 'row',
-    marginTop: spacing.sm,
+  profileInfo: {
+    paddingHorizontal: 15,
+    marginBottom: 15,
   },
-  editButton: {
-    width: 150,
-  },
-  sectionContainer: {
-    backgroundColor: colors.white,
-    marginTop: spacing.md,
-    padding: spacing.lg,
-    marginBottom: spacing.lg,
-  },
-  sectionTitle: {
-    fontSize: typography.fontSize.lg,
+  userName: {
     fontWeight: 'bold',
-    color: colors.text,
-    marginBottom: spacing.md,
+    fontSize: 13,
+    marginBottom: 3,
   },
-  emptyContainer: {
+  userBio: {
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  userWebsite: {
+    fontSize: 13,
+    color: '#003569',
+  },
+  editProfileButton: {
+    marginHorizontal: 15,
+    height: 30,
+    justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: spacing.xl,
-  },
-  emptyText: {
-    fontSize: typography.fontSize.md,
-    color: colors.textSecondary,
-  },
-  logoutButton: {
-    margin: spacing.lg,
-    paddingVertical: spacing.md,
-    alignItems: 'center',
-    backgroundColor: colors.white,
-    borderRadius: 8,
+    borderRadius: 4,
     borderWidth: 1,
-    borderColor: colors.error,
+    borderColor: '#dbdbdb',
+    marginBottom: 15,
   },
-  logoutText: {
-    color: colors.error,
-    fontSize: typography.fontSize.md,
-    fontWeight: '500',
+  editProfileText: {
+    fontWeight: '600',
+    fontSize: 13,
+  },
+  highlightsContainer: {
+    paddingVertical: 10,
+    borderBottomWidth: 0.5,
+    borderBottomColor: '#dbdbdb',
+  },
+  highlightsContent: {
+    paddingHorizontal: 15,
+  },
+  highlightItem: {
+    alignItems: 'center',
+    marginRight: 15,
+    width: 75,
+  },
+  highlightCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 5,
+    borderWidth: 1,
+    borderColor: '#dbdbdb',
+  },
+  highlightImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+  },
+  addHighlightButton: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fafafa',
+  },
+  addHighlightIcon: {
+    fontSize: 28,
+    fontWeight: '300',
+    color: '#262626',
+  },
+  highlightTitle: {
+    fontSize: 12,
+    textAlign: 'center',
+  },
+  tabHeader: {
+    flexDirection: 'row',
+    height: 44,
+    borderBottomWidth: 0.5,
+    borderBottomColor: '#dbdbdb',
+  },
+  tabButton: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  activeTab: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#262626',
+  },
+  tabIcon: {
+    fontSize: 24,
+  },
+  gridItem: {
+    width: POST_SIZE,
+    height: POST_SIZE,
+    padding: 0.5,
+  },
+  gridImage: {
+    flex: 1,
   },
 });
 

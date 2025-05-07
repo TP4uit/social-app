@@ -1,15 +1,23 @@
 // src/components/screens/LoginScreen.js
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  TextInput,
+  TouchableOpacity, 
+  KeyboardAvoidingView, 
+  Platform, // Added Platform import here
+  Image,
+  SafeAreaView
+} from 'react-native';
 import { colors, spacing, typography } from '../../theme';
-import Input from '../common/Input';
-import Button from '../common/Button';
 import { useAuth } from '../../hooks/useAuth';
 
 const LoginScreen = ({ navigation }) => {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [emailError, setEmailError] = useState('');
+  const [usernameError, setUsernameError] = useState('');
   const [passwordError, setPasswordError] = useState('');
   
   const { login, loading, error } = useAuth();
@@ -17,23 +25,17 @@ const LoginScreen = ({ navigation }) => {
   const validateForm = () => {
     let isValid = true;
     
-    // Email validation
-    if (!email.trim()) {
-      setEmailError('Email is required');
-      isValid = false;
-    } else if (!/\S+@\S+\.\S+/.test(email)) {
-      setEmailError('Email is invalid');
+    // Username validation
+    if (!username.trim()) {
+      setUsernameError('Username is required');
       isValid = false;
     } else {
-      setEmailError('');
+      setUsernameError('');
     }
     
     // Password validation
     if (!password) {
       setPasswordError('Password is required');
-      isValid = false;
-    } else if (password.length < 6) {
-      setPasswordError('Password must be at least 6 characters');
       isValid = false;
     } else {
       setPasswordError('');
@@ -46,7 +48,8 @@ const LoginScreen = ({ navigation }) => {
     if (!validateForm()) return;
     
     try {
-      await login(email, password);
+      // For Instagram-style login, we're using username instead of email
+      await login(username, password);
       // Navigation is handled by the AppNavigator based on auth state
     } catch (error) {
       console.log('Login error:', error);
@@ -54,18 +57,13 @@ const LoginScreen = ({ navigation }) => {
   };
   
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 50 : 0}
-    >
-      <ScrollView 
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
+    <SafeAreaView style={styles.container}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardAvoid}
       >
         <View style={styles.logoContainer}>
           <Text style={styles.appName}>Social App</Text>
-          <Text style={styles.tagline}>Connect with friends and the world around you.</Text>
         </View>
         
         <View style={styles.formContainer}>
@@ -75,112 +73,190 @@ const LoginScreen = ({ navigation }) => {
             </View>
           )}
           
-          <Input
-            label="Email"
-            value={email}
-            onChangeText={setEmail}
-            placeholder="Enter your email"
-            keyboardType="email-address"
-            error={emailError}
+          <TextInput
+            style={[styles.input, usernameError ? styles.inputError : null]}
+            placeholder="Username, email or phone number"
+            placeholderTextColor="#8e8e8e"
+            value={username}
+            onChangeText={setUsername}
+            autoCapitalize="none"
           />
+          {usernameError ? <Text style={styles.errorText}>{usernameError}</Text> : null}
           
-          <Input
-            label="Password"
+          <TextInput
+            style={[styles.input, passwordError ? styles.inputError : null]}
+            placeholder="Password"
+            placeholderTextColor="#8e8e8e"
             value={password}
             onChangeText={setPassword}
-            placeholder="Enter your password"
             secureTextEntry
-            error={passwordError}
           />
+          {passwordError ? <Text style={styles.errorText}>{passwordError}</Text> : null}
           
-          <TouchableOpacity style={styles.forgotPassword}>
-            <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+          <TouchableOpacity 
+            style={styles.forgotPassword}
+            onPress={() => {/* Handle forgot password */}}
+          >
+            <Text style={styles.forgotText}>Forgot password?</Text>
           </TouchableOpacity>
           
-          <Button
-            title="Login"
+          <TouchableOpacity 
+            style={[
+              styles.loginButton, 
+              (username && password) ? styles.loginButtonActive : {},
+              loading ? styles.loginButtonLoading : {}
+            ]}
             onPress={handleLogin}
-            loading={loading}
-            style={styles.loginButton}
-          />
-          
-          <View style={styles.registerContainer}>
-            <Text style={styles.registerText}>Don't have an account? </Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-              <Text style={styles.registerLink}>Sign Up</Text>
-            </TouchableOpacity>
-          </View>
+            disabled={loading || !username || !password}
+          >
+            <Text style={styles.loginButtonText}>
+              {loading ? 'Logging in...' : 'Log in'}
+            </Text>
+          </TouchableOpacity>
         </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        
+        <View style={styles.orContainer}>
+          <View style={styles.orLine} />
+          <Text style={styles.orText}>OR</Text>
+          <View style={styles.orLine} />
+        </View>
+        
+        <TouchableOpacity style={styles.fbLoginButton}>
+          <Text style={styles.fbLoginText}>Log in with Facebook</Text>
+        </TouchableOpacity>
+        
+        <View style={styles.switchContainer}>
+          <Text style={styles.noAccountText}>Don't have an account? </Text>
+          <TouchableOpacity onPress={() => navigation.navigate('Register')}>
+            <Text style={styles.signupText}>Sign up.</Text>
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: '#ffffff',
   },
-  scrollContent: {
-    flexGrow: 1,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.xl,
+  keyboardAvoid: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 40,
   },
   logoContainer: {
     alignItems: 'center',
-    marginBottom: spacing.xl,
-    marginTop: spacing.xxl,
+    marginBottom: 35,
   },
   appName: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: colors.primary,
-    marginBottom: spacing.sm,
-  },
-  tagline: {
-    fontSize: typography.fontSize.md,
-    color: colors.textSecondary,
-    textAlign: 'center',
+    fontSize: 40,
+    fontWeight: '500',
+    fontFamily: Platform.OS === 'ios' ? 'Noteworthy' : 'normal',
   },
   formContainer: {
     width: '100%',
   },
-  errorContainer: {
-    backgroundColor: '#FEEEF0',
-    borderRadius: 8,
-    padding: spacing.md,
-    marginBottom: spacing.md,
+  input: {
+    height: 44,
     borderWidth: 1,
-    borderColor: colors.error,
+    borderColor: '#dbdbdb',
+    borderRadius: 5,
+    paddingHorizontal: 12,
+    backgroundColor: '#fafafa',
+    marginBottom: 12,
+    fontSize: 14,
+  },
+  inputError: {
+    borderColor: '#ed4956',
+  },
+  errorContainer: {
+    backgroundColor: '#fef1f3',
+    borderRadius: 5,
+    padding: 10,
+    marginBottom: 12,
   },
   errorText: {
-    color: colors.error,
-    fontSize: typography.fontSize.sm,
+    color: '#ed4956',
+    fontSize: 12,
+    marginBottom: 8,
+    marginLeft: 2,
   },
   forgotPassword: {
     alignSelf: 'flex-end',
-    marginBottom: spacing.md,
+    marginBottom: 20,
   },
-  forgotPasswordText: {
-    color: colors.primary,
-    fontSize: typography.fontSize.sm,
+  forgotText: {
+    color: '#00376b',
+    fontSize: 12,
+    fontWeight: '500',
   },
   loginButton: {
-    marginTop: spacing.md,
+    height: 44,
+    backgroundColor: '#b2dffc',
+    borderRadius: 5,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  registerContainer: {
+  loginButtonActive: {
+    backgroundColor: '#0095f6',
+  },
+  loginButtonLoading: {
+    opacity: 0.7,
+  },
+  loginButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  orContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 18,
+    width: '100%',
+  },
+  orLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#dbdbdb',
+  },
+  orText: {
+    color: '#8e8e8e',
+    fontSize: 12,
+    fontWeight: '600',
+    marginHorizontal: 18,
+  },
+  fbLoginButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 30,
+  },
+  fbLoginText: {
+    color: '#00376b',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  switchContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: spacing.xl,
+    position: 'absolute',
+    bottom: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#dbdbdb',
+    paddingTop: 15,
+    width: '100%',
   },
-  registerText: {
-    color: colors.textSecondary,
-    fontSize: typography.fontSize.md,
+  noAccountText: {
+    color: '#262626',
+    fontSize: 14,
   },
-  registerLink: {
-    color: colors.primary,
-    fontSize: typography.fontSize.md,
-    fontWeight: 'bold',
+  signupText: {
+    color: '#0095f6',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
 
