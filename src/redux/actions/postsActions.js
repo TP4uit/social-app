@@ -6,7 +6,7 @@ import {
     CREATE_POST_SUCCESS,
     CREATE_POST_FAILURE
   } from './types';
-  import { postsService } from '../../api/posts';
+  import { mockPostsService as postsService } from '../../api/mockPosts';
   
   export const fetchPosts = (page = 1) => async (dispatch) => {
     dispatch({ type: FETCH_POSTS_REQUEST });

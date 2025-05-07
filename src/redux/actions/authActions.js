@@ -4,7 +4,7 @@ import {
     LOGIN_FAILURE,
     LOGOUT
   } from './types';
-  import { authService } from '../../api/auth';
+  import { mockAuthService as authService } from '../../api/mockAuth';
   import AsyncStorage from '@react-native-async-storage/async-storage';
   
   export const login = (email, password) => async (dispatch) => {
