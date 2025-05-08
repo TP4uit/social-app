@@ -1,6 +1,5 @@
-// src/Main.js (đổi tên từ App.js trong thư mục src)
+// src/Main.js - REPLACE ENTIRE FILE
 import React, { useEffect } from 'react';
-import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Provider } from 'react-redux';
 import store from './redux/store';
@@ -36,7 +35,6 @@ export default function Main() {
   return (
     <Provider store={store}>
       <SafeAreaProvider>
-        <StatusBar style="auto" />
         <AppNavigator />
       </SafeAreaProvider>
     </Provider>

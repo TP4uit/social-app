@@ -1,4 +1,4 @@
-// src/components/screens/NotificationsScreen.js
+// src/components/screens/NotificationsScreen.js - REPLACE ENTIRE FILE
 import React from 'react';
 import { 
   View, 
@@ -184,7 +184,6 @@ const NotificationsScreen = () => {
     );
   };
 
-  // Main fix is here - use FlatList properly
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -193,7 +192,7 @@ const NotificationsScreen = () => {
 
       <FlatList
         data={NOTIFICATIONS}
-        keyExtractor={(item) => item.id} // Use the proper unique ID
+        keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <View>
             {renderSectionHeader({ section: item })}
@@ -261,7 +260,7 @@ const styles = StyleSheet.create({
   },
   followButton: {
     backgroundColor: '#0095f6',
-    borderRadius: 4,
+    borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 5,
     marginHorizontal: 8,

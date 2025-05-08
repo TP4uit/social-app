@@ -1,4 +1,4 @@
-// src/components/screens/FeedScreen.js
+// src/components/screens/FeedScreen.js - REPLACE ENTIRE FILE
 import React, { useEffect, useState } from 'react';
 import { 
   View, 
@@ -10,7 +10,8 @@ import {
   Image,
   TouchableOpacity,
   SafeAreaView,
-  Platform  // Added Platform import here
+  StatusBar,
+  Platform
 } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
 import { fetchPosts } from '../../redux/actions/postsActions';
@@ -168,32 +169,39 @@ const FeedScreen = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerLogo}>Social App</Text>
-        <View style={styles.headerRight}>
-          <TouchableOpacity style={styles.iconButton}>
-            <Text style={styles.addPostIcon}>+</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.iconButton, styles.messageIcon]}>
-            <Text style={styles.messageCount}>2</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-      <FlatList
-        data={posts}
-        renderItem={renderItem}
-        keyExtractor={item => (item.id || Math.random().toString()).toString()}
-        ListHeaderComponent={ListHeaderComponent}
-        ListFooterComponent={renderFooter}
-        ListEmptyComponent={renderEmptyComponent}
-        onEndReached={loadMorePosts}
-        onEndReachedThreshold={0.5}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
-        }
+    <>
+      <StatusBar 
+        barStyle="dark-content" 
+        backgroundColor="white" 
+        translucent={false}
       />
-    </SafeAreaView>
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.headerLogo}>Instagram</Text>
+          <View style={styles.headerRight}>
+            <TouchableOpacity style={styles.iconButton}>
+              <Text style={styles.addPostIcon}>+</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.iconButton, styles.messageIcon]}>
+              <Text style={styles.messageCount}>2</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+        <FlatList
+          data={posts}
+          renderItem={renderItem}
+          keyExtractor={item => (item.id || Math.random().toString()).toString()}
+          ListHeaderComponent={ListHeaderComponent}
+          ListFooterComponent={renderFooter}
+          ListEmptyComponent={renderEmptyComponent}
+          onEndReached={loadMorePosts}
+          onEndReachedThreshold={0.5}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+          }
+        />
+      </SafeAreaView>
+    </>
   );
 };
 

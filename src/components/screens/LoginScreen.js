@@ -1,4 +1,4 @@
-// src/components/screens/LoginScreen.js
+// src/components/screens/LoginScreen.js - REPLACE ENTIRE FILE
 import React, { useState } from 'react';
 import { 
   View, 
@@ -7,7 +7,7 @@ import {
   TextInput,
   TouchableOpacity, 
   KeyboardAvoidingView, 
-  Platform, // Added Platform import here
+  Platform,
   Image,
   SafeAreaView
 } from 'react-native';
@@ -25,7 +25,6 @@ const LoginScreen = ({ navigation }) => {
   const validateForm = () => {
     let isValid = true;
     
-    // Username validation
     if (!username.trim()) {
       setUsernameError('Username is required');
       isValid = false;
@@ -33,7 +32,6 @@ const LoginScreen = ({ navigation }) => {
       setUsernameError('');
     }
     
-    // Password validation
     if (!password) {
       setPasswordError('Password is required');
       isValid = false;
@@ -48,7 +46,6 @@ const LoginScreen = ({ navigation }) => {
     if (!validateForm()) return;
     
     try {
-      // For Instagram-style login, we're using username instead of email
       await login(username, password);
       // Navigation is handled by the AppNavigator based on auth state
     } catch (error) {
@@ -63,7 +60,7 @@ const LoginScreen = ({ navigation }) => {
         style={styles.keyboardAvoid}
       >
         <View style={styles.logoContainer}>
-          <Text style={styles.appName}>Social App</Text>
+          <Text style={styles.appName}>Instagram</Text>
         </View>
         
         <View style={styles.formContainer}>
@@ -196,7 +193,7 @@ const styles = StyleSheet.create({
   loginButton: {
     height: 44,
     backgroundColor: '#b2dffc',
-    borderRadius: 5,
+    borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
   },

@@ -1,4 +1,4 @@
-// src/components/screens/ProfileScreen.js
+// src/components/screens/ProfileScreen.js - REPLACE ENTIRE FILE
 import React from 'react';
 import { 
   View, 
@@ -9,7 +9,8 @@ import {
   SafeAreaView,
   FlatList,
   Dimensions,
-  Platform  // Added Platform import here
+  Platform,
+  Alert
 } from 'react-native';
 import { colors } from '../../theme';
 import { useAuth } from '../../hooks/useAuth';
@@ -50,6 +51,24 @@ const ProfileScreen = ({ navigation }) => {
     posts: 54,
     followers: 834,
     following: 162
+  };
+  
+  const handleLogout = () => {
+    Alert.alert(
+      "Logout",
+      "Are you sure you want to logout?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel"
+        },
+        { 
+          text: "Logout", 
+          onPress: () => logout(),
+          style: "destructive"
+        }
+      ]
+    );
   };
   
   const HighlightItem = ({ item }) => (
@@ -109,10 +128,19 @@ const ProfileScreen = ({ navigation }) => {
         <Text style={styles.userBio}>{userData.bio}</Text>
       </View>
       
-      {/* Edit Profile Button */}
-      <TouchableOpacity style={styles.editProfileButton}>
-        <Text style={styles.editProfileText}>Edit Profile</Text>
-      </TouchableOpacity>
+      {/* Action Buttons */}
+      <View style={styles.actionButtonsContainer}>
+        <TouchableOpacity style={styles.editProfileButton}>
+          <Text style={styles.editProfileText}>Edit Profile</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity 
+          style={styles.logoutButton}
+          onPress={handleLogout}
+        >
+          <Text style={styles.logoutText}>Logout</Text>
+        </TouchableOpacity>
+      </View>
       
       {/* Story Highlights */}
       <FlatList
@@ -256,17 +284,37 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#003569',
   },
-  editProfileButton: {
-    marginHorizontal: 15,
-    height: 30,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: '#dbdbdb',
+  actionButtonsContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 15,
     marginBottom: 15,
   },
+  editProfileButton: {
+    flex: 1,
+    height: 34,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#dbdbdb',
+    marginRight: 5,
+  },
   editProfileText: {
+    fontWeight: '600',
+    fontSize: 13,
+  },
+  logoutButton: {
+    flex: 1,
+    height: 34,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ed4956',
+    marginLeft: 5,
+  },
+  logoutText: {
+    color: '#ed4956',
     fontWeight: '600',
     fontSize: 13,
   },
