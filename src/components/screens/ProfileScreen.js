@@ -1,4 +1,4 @@
-// src/components/screens/ProfileScreen.js - REPLACE ENTIRE FILE
+// src/components/screens/ProfileScreen.js
 import React from 'react';
 import { 
   View, 
@@ -294,7 +294,7 @@ const styles = StyleSheet.create({
     height: 34,
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: 8,
+    borderRadius: 4,
     borderWidth: 1,
     borderColor: '#dbdbdb',
     marginRight: 5,
@@ -308,7 +308,7 @@ const styles = StyleSheet.create({
     height: 34,
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: 8,
+    borderRadius: 4,
     borderWidth: 1,
     borderColor: '#ed4956',
     marginLeft: 5,

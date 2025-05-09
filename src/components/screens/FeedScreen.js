@@ -1,4 +1,4 @@
-// src/components/screens/FeedScreen.js - REPLACE ENTIRE FILE
+// src/components/screens/FeedScreen.js
 import React, { useEffect, useState } from 'react';
 import { 
   View, 

@@ -1,4 +1,4 @@
-// src/components/screens/components/PostItem.js - REPLACE ENTIRE FILE
+// src/components/screens/components/PostItem.js
 import React from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { colors } from '../../../theme';

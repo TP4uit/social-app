@@ -1,20 +1,22 @@
-// src/navigation/index.js - REPLACE ENTIRE FILE
+// src/navigation/index.js
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useSelector } from 'react-redux';
-import { Text, StatusBar, Platform } from 'react-native';
+import { Text, StatusBar, Platform, Image } from 'react-native';
 import { colors } from '../theme';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 // Import screens
-import LoginScreen from '../components/screens/LoginScreen';
+import AccountSelectionScreen from '../components/screens/AccountSelectionScreen';
+import LoginFormScreen from '../components/screens/LoginFormScreen';
 import RegisterScreen from '../components/screens/RegisterScreen';
 import FeedScreen from '../components/screens/FeedScreen';
 import ProfileScreen from '../components/screens/ProfileScreen';
-import CreatePostScreen from '../components/screens/CreatePostScreen';
+import SearchScreen from '../components/screens/SearchScreen';
 import NotificationsScreen from '../components/screens/NotificationsScreen';
+import CreatePostScreen from '../components/screens/CreatePostScreen';
 import SettingsScreen from '../components/screens/SettingsScreen';
 
 // Create navigators
@@ -29,7 +31,8 @@ const AuthNavigator = () => {
         headerShown: false,
       }}
     >
-      <Stack.Screen name="Login" component={LoginScreen} />
+      <Stack.Screen name="AccountSelection" component={AccountSelectionScreen} />
+      <Stack.Screen name="LoginForm" component={LoginFormScreen} />
       <Stack.Screen name="Register" component={RegisterScreen} />
     </Stack.Navigator>
   );
@@ -41,19 +44,19 @@ const TabIcon = ({ name, focused }) => {
   
   switch (name) {
     case 'Feed':
-      icon = '🏠';
+      icon = focused ? '🏠' : '🏡';
       break;
     case 'Search':
-      icon = '🔍';
+      icon = focused ? '🔍' : '🔎';
       break;
     case 'Post':
-      icon = '➕';
+      icon = focused ? '➕' : '✚';
       break;
     case 'Activity':
-      icon = '❤️';
+      icon = focused ? '❤️' : '♡';
       break;
     case 'Profile':
-      icon = '👤';
+      icon = focused ? '👤' : '👤';
       break;
     default:
       icon = '⚪';
@@ -91,7 +94,7 @@ const TabNavigator = () => {
       />
       <Tab.Screen 
         name="Search" 
-        component={CreatePostScreen} 
+        component={SearchScreen} 
         options={{
           tabBarLabel: '',
           tabBarIcon: ({ focused }) => <TabIcon name="Search" focused={focused} />

@@ -1,4 +1,4 @@
-// src/components/screens/NotificationsScreen.js - REPLACE ENTIRE FILE
+// src/components/screens/NotificationsScreen.js
 import React from 'react';
 import { 
   View, 
@@ -260,7 +260,7 @@ const styles = StyleSheet.create({
   },
   followButton: {
     backgroundColor: '#0095f6',
-    borderRadius: 8,
+    borderRadius: 4,
     paddingHorizontal: 10,
     paddingVertical: 5,
     marginHorizontal: 8,

@@ -1,4 +1,4 @@
-// src/components/screens/LoginScreen.js - REPLACE ENTIRE FILE
+// src/components/screens/LoginFormScreen.js
 import React, { useState } from 'react';
 import { 
   View, 
@@ -14,7 +14,7 @@ import {
 import { colors, spacing, typography } from '../../theme';
 import { useAuth } from '../../hooks/useAuth';
 
-const LoginScreen = ({ navigation }) => {
+const LoginFormScreen = ({ navigation }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [usernameError, setUsernameError] = useState('');
@@ -193,7 +193,7 @@ const styles = StyleSheet.create({
   loginButton: {
     height: 44,
     backgroundColor: '#b2dffc',
-    borderRadius: 8,
+    borderRadius: 5,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -257,4 +257,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default LoginScreen;
+export default LoginFormScreen;
