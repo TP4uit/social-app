@@ -33,7 +33,7 @@ const AccountSelectionScreen = ({ navigation }) => {
         style={styles.keyboardAvoid}
       >
         <View style={styles.logoContainer}>
-          <Text style={styles.appName}>Instagram</Text>
+          <Text style={styles.appName}>Drama Social</Text>
         </View>
         
         <View style={styles.profileContainer}>

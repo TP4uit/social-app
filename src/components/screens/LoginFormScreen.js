@@ -1,12 +1,11 @@
-// src/components/screens/LoginFormScreen.js
 import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
+import {
+  View,
+  Text,
+  StyleSheet,
   TextInput,
-  TouchableOpacity, 
-  KeyboardAvoidingView, 
+  TouchableOpacity,
+  KeyboardAvoidingView,
   Platform,
   Image,
   SafeAreaView
@@ -19,32 +18,32 @@ const LoginFormScreen = ({ navigation }) => {
   const [password, setPassword] = useState('');
   const [usernameError, setUsernameError] = useState('');
   const [passwordError, setPasswordError] = useState('');
-  
+
   const { login, loading, error } = useAuth();
-  
+
   const validateForm = () => {
     let isValid = true;
-    
+
     if (!username.trim()) {
       setUsernameError('Username is required');
       isValid = false;
     } else {
       setUsernameError('');
     }
-    
+
     if (!password) {
       setPasswordError('Password is required');
       isValid = false;
     } else {
       setPasswordError('');
     }
-    
+
     return isValid;
   };
-  
+
   const handleLogin = async () => {
     if (!validateForm()) return;
-    
+
     try {
       await login(username, password);
       // Navigation is handled by the AppNavigator based on auth state
@@ -52,7 +51,7 @@ const LoginFormScreen = ({ navigation }) => {
       console.log('Login error:', error);
     }
   };
-  
+
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
@@ -60,16 +59,16 @@ const LoginFormScreen = ({ navigation }) => {
         style={styles.keyboardAvoid}
       >
         <View style={styles.logoContainer}>
-          <Text style={styles.appName}>Instagram</Text>
+          <Text style={styles.appName}>Drama Social</Text>
         </View>
-        
+
         <View style={styles.formContainer}>
           {error && (
             <View style={styles.errorContainer}>
               <Text style={styles.errorText}>{error}</Text>
             </View>
           )}
-          
+
           <TextInput
             style={[styles.input, usernameError ? styles.inputError : null]}
             placeholder="Username, email or phone number"
@@ -79,7 +78,7 @@ const LoginFormScreen = ({ navigation }) => {
             autoCapitalize="none"
           />
           {usernameError ? <Text style={styles.errorText}>{usernameError}</Text> : null}
-          
+
           <TextInput
             style={[styles.input, passwordError ? styles.inputError : null]}
             placeholder="Password"
@@ -89,17 +88,17 @@ const LoginFormScreen = ({ navigation }) => {
             secureTextEntry
           />
           {passwordError ? <Text style={styles.errorText}>{passwordError}</Text> : null}
-          
-          <TouchableOpacity 
+
+          <TouchableOpacity
             style={styles.forgotPassword}
             onPress={() => {/* Handle forgot password */}}
           >
             <Text style={styles.forgotText}>Forgot password?</Text>
           </TouchableOpacity>
-          
-          <TouchableOpacity 
+
+          <TouchableOpacity
             style={[
-              styles.loginButton, 
+              styles.loginButton,
               (username && password) ? styles.loginButtonActive : {},
               loading ? styles.loginButtonLoading : {}
             ]}
@@ -111,17 +110,17 @@ const LoginFormScreen = ({ navigation }) => {
             </Text>
           </TouchableOpacity>
         </View>
-        
+
         <View style={styles.orContainer}>
           <View style={styles.orLine} />
           <Text style={styles.orText}>OR</Text>
           <View style={styles.orLine} />
         </View>
-        
+
         <TouchableOpacity style={styles.fbLoginButton}>
           <Text style={styles.fbLoginText}>Log in with Facebook</Text>
         </TouchableOpacity>
-        
+
         <View style={styles.switchContainer}>
           <Text style={styles.noAccountText}>Don't have an account? </Text>
           <TouchableOpacity onPress={() => navigation.navigate('Register')}>

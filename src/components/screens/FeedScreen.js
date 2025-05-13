@@ -1,11 +1,10 @@
-// src/components/screens/FeedScreen.js
 import React, { useEffect, useState } from 'react';
-import { 
-  View, 
-  FlatList, 
-  StyleSheet, 
-  RefreshControl, 
-  Text, 
+import {
+  View,
+  FlatList,
+  StyleSheet,
+  RefreshControl,
+  Text,
   ActivityIndicator,
   Image,
   TouchableOpacity,
@@ -31,7 +30,7 @@ const StoryItem = ({ item }) => {
   return (
     <TouchableOpacity style={styles.storyContainer}>
       <View style={[
-        styles.storyAvatarBorder, 
+        styles.storyAvatarBorder,
         item.hasStory ? styles.hasStoryBorder : styles.noStoryBorder
       ]}>
         <View style={styles.storyAvatar}>
@@ -95,7 +94,7 @@ const FeedScreen = () => {
       setRefreshing(false);
     }
   };
-  
+
   // Header component with stories
   const ListHeaderComponent = () => (
     <FlatList
@@ -114,7 +113,7 @@ const FeedScreen = () => {
     if (!item || !item.author) {
       return null;
     }
-    
+
     const safeItem = {
       ...item,
       author: {
@@ -125,7 +124,7 @@ const FeedScreen = () => {
       comments: item.comments || [],
       likes: item.likes || 0
     };
-    
+
     return <PostItem post={safeItem} />;
   };
 
@@ -170,14 +169,14 @@ const FeedScreen = () => {
 
   return (
     <>
-      <StatusBar 
-        barStyle="dark-content" 
-        backgroundColor="white" 
+      <StatusBar
+        barStyle="dark-content"
+        backgroundColor="white"
         translucent={false}
       />
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.headerLogo}>Instagram</Text>
+          <Text style={styles.headerLogo}>Drama Social</Text>
           <View style={styles.headerRight}>
             <TouchableOpacity style={styles.iconButton}>
               <Text style={styles.addPostIcon}>+</Text>
