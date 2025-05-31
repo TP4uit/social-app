@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -108,7 +108,7 @@ const CreatePostScreen = ({ navigation }) => {
 
             <View style={styles.iconToolbar}>
               <TouchableOpacity style={styles.toolbarIconWrapper}>
-                <Icon name="images-outline" size={26} color={colors.primary} />
+                <Icon name="camera-outline" size={26} color={colors.primary} />
               </TouchableOpacity>
               <TouchableOpacity style={styles.toolbarIconWrapper}>
                 <Icon name="pricetag-outline" size={24} color={colors.textSecondary} />

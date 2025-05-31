@@ -238,7 +238,7 @@ const NotificationsScreen = ({ navigation }) => {
         <Text style={styles.headerTitle}>Notifications</Text>
         {/* Giả sử bạn có màn hình Settings và navigation được truyền vào */}
         <TouchableOpacity onPress={() => navigation && navigation.navigate('Settings')}>
-          <Text style={styles.settingsIcon}>⚙️</Text>
+          <Text style={styles.settingsIcon}>⋮</Text>
         </TouchableOpacity>
       </View>
 
