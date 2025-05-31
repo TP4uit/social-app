@@ -3,6 +3,7 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import Icon from 'react-native-vector-icons/Ionicons';
 import { useSelector } from 'react-redux';
 import { Text, StatusBar, Platform, Image } from 'react-native';
 import { colors } from '../theme';
@@ -39,39 +40,38 @@ const AuthNavigator = () => {
 };
 
 // Simple icon component for tab navigator
-const TabIcon = ({ name, focused }) => {
-  let icon = '';
-  
+const TabIcon = ({ name, focused, color, size }) => { // Thêm props color và size từ TabNavigator
+  let iconName;
+  const iconSize = focused ? size + 2 : size; // Icon có thể to hơn một chút khi active
+
   switch (name) {
     case 'Feed':
-      icon = focused ? '🏠' : '🏡';
+      iconName = focused ? 'home' : 'home-outline';
       break;
     case 'Search':
-      icon = focused ? '🔍' : '🔎';
+      iconName = focused ? 'search' : 'search-outline';
       break;
-    case 'Post':
-      icon = focused ? '➕' : '✚';
+    case 'Post': // CreatePostScreen
+      iconName = focused ? 'add-circle' : 'add-circle-outline';
       break;
-    case 'Activity':
-      icon = focused ? '❤️' : '♡';
+    case 'Activity': // NotificationsScreen
+      iconName = focused ? 'heart' : 'heart-outline';
       break;
-    case 'Profile':
-      icon = focused ? '👤' : '👤';
+    case 'Profile': // ProfileScreen
+      iconName = focused ? 'person' : 'person-outline';
       break;
     default:
-      icon = '⚪';
+      iconName = 'ellipse-outline'; // Icon mặc định nếu có lỗi
   }
-  
-  return (
-    <Text style={{ fontSize: 24, opacity: focused ? 1 : 0.5 }}>{icon}</Text>
-  );
+
+  return <Icon name={iconName} size={iconSize} color={color} />;
 };
 
 // Main tab navigator
 const TabNavigator = () => {
   return (
     <Tab.Navigator
-      screenOptions={{
+      screenOptions={({ route }) => ({ // Truyền route vào screenOptions
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textSecondary,
         headerShown: false,
@@ -79,50 +79,36 @@ const TabNavigator = () => {
           borderTopWidth: 1,
           borderTopColor: colors.border,
           backgroundColor: colors.white,
-          height: 50,
-          paddingTop: 5,
+          height: 60,
+          paddingTop: 10, // Có thể điều chỉnh nếu cần
         },
-      }}
+        // Cập nhật tabBarIcon để truyền props chuẩn
+        tabBarIcon: ({ focused, color, size }) => {
+          return <TabIcon name={route.name} focused={focused} color={color} size={size || 24} />;
+        },
+        tabBarLabel: '', // Giữ nguyên không hiển thị label
+      })}
     >
-      <Tab.Screen 
-        name="Feed" 
-        component={FeedScreen} 
-        options={{
-          tabBarLabel: '',
-          tabBarIcon: ({ focused }) => <TabIcon name="Feed" focused={focused} />
-        }}
+      <Tab.Screen
+        name="Feed"
+        component={FeedScreen}
+        // options đã được xử lý ở screenOptions chung
       />
-      <Tab.Screen 
-        name="Search" 
-        component={SearchScreen} 
-        options={{
-          tabBarLabel: '',
-          tabBarIcon: ({ focused }) => <TabIcon name="Search" focused={focused} />
-        }}
+      <Tab.Screen
+        name="Search"
+        component={SearchScreen}
       />
-      <Tab.Screen 
-        name="Post" 
-        component={CreatePostScreen} 
-        options={{
-          tabBarLabel: '',
-          tabBarIcon: ({ focused }) => <TabIcon name="Post" focused={focused} />
-        }}
+      <Tab.Screen
+        name="Post" // Đây là routeName cho CreatePostScreen
+        component={CreatePostScreen}
       />
-      <Tab.Screen 
-        name="Activity" 
-        component={NotificationsScreen} 
-        options={{
-          tabBarLabel: '',
-          tabBarIcon: ({ focused }) => <TabIcon name="Activity" focused={focused} />
-        }}
+      <Tab.Screen
+        name="Activity" // Đây là routeName cho NotificationsScreen
+        component={NotificationsScreen}
       />
-      <Tab.Screen 
-        name="Profile" 
-        component={ProfileScreen} 
-        options={{
-          tabBarLabel: '',
-          tabBarIcon: ({ focused }) => <TabIcon name="Profile" focused={focused} />
-        }}
+      <Tab.Screen
+        name="Profile"
+        component={ProfileScreen}
       />
     </Tab.Navigator>
   );

@@ -1,178 +1,194 @@
-// src/components/screens/SearchScreen.js
 import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  TextInput, 
-  FlatList, 
-  Image, 
+import {
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+  FlatList,
+  Image,
   TouchableOpacity,
   Dimensions,
-  SafeAreaView
+  SafeAreaView,
+  ScrollView, // Thêm ScrollView
 } from 'react-native';
-import { colors } from '../../theme';
+import { colors, spacing, typography } from '../../theme';
+import Icon from 'react-native-vector-icons/Ionicons'; // Sử dụng Ionicons
 
-// Mock categories for search
+// Cập nhật danh mục, bỏ "Reels" theo quyết định trước
 const CATEGORIES = [
-  { id: '1', name: 'IGTV' },
-  { id: '2', name: 'Shop' },
-  { id: '3', name: 'Style' },
-  { id: '4', name: 'Sports' },
-  { id: '5', name: 'Auto' },
-  { id: '6', name: 'Travel' },
-  { id: '7', name: 'Food' },
-  { id: '8', name: 'Art' },
-  { id: '9', name: 'Music' },
+  { id: '1', name: 'For You' },
+  { id: '2', name: 'Trending' },
+  // { id: '3', name: 'Reels' }, // Tạm thời loại bỏ
+  { id: '4', name: 'Videos' },
+  { id: '5', name: 'Accounts' },
+  { id: '6', name: 'Style' }, // Giữ lại một vài categories cũ hoặc thêm mới
+  { id: '7', name: 'Travel' },
+  { id: '8', name: 'Food' },
 ];
 
-// Mock data for explore grid
-const EXPLORE_POSTS = [
-  // Row 1
-  { id: '1', image: 'https://picsum.photos/id/1/500/500', aspectRatio: 1 },
-  { id: '2', image: 'https://picsum.photos/id/2/500/500', aspectRatio: 1 },
-  { id: '3', image: 'https://picsum.photos/id/3/500/500', aspectRatio: 1 },
-  // Row 2
-  { id: '4', image: 'https://picsum.photos/id/4/500/800', aspectRatio: 0.625 },
-  { id: '5', image: 'https://picsum.photos/id/5/800/500', aspectRatio: 1.6 },
-  // Row 3
-  { id: '6', image: 'https://picsum.photos/id/6/500/500', aspectRatio: 1 },
-  { id: '7', image: 'https://picsum.photos/id/7/500/500', aspectRatio: 1 },
-  { id: '8', image: 'https://picsum.photos/id/8/500/500', aspectRatio: 1 },
-  // Row 4
-  { id: '9', image: 'https://picsum.photos/id/9/800/500', aspectRatio: 1.6 },
-  { id: '10', image: 'https://picsum.photos/id/10/500/800', aspectRatio: 0.625 },
-  // Continue with more rows as needed
-  { id: '11', image: 'https://picsum.photos/id/11/500/500', aspectRatio: 1 },
-  { id: '12', image: 'https://picsum.photos/id/12/500/500', aspectRatio: 1 },
-  { id: '13', image: 'https://picsum.photos/id/13/500/500', aspectRatio: 1 },
-  { id: '14', image: 'https://picsum.photos/id/14/500/500', aspectRatio: 1 },
-  { id: '15', image: 'https://picsum.photos/id/15/500/500', aspectRatio: 1 },
-];
+// Mock data cho lưới khám phá - có thể giữ nguyên hoặc cập nhật
+const EXPLORE_POSTS = Array.from({ length: 20 }).map((_, i) => ({
+  id: `${i + 1}`,
+  image: `https://picsum.photos/seed/${i + 100}/300/300`, // Đảm bảo ảnh khác nhau
+}));
 
 const { width } = Dimensions.get('window');
-const SPACING = 1;
-const ITEM_WIDTH = (width - SPACING * 4) / 3;
+const NUM_COLUMNS = 2; // Chuyển sang lưới 2 cột
+const ITEM_MARGIN = spacing.xs / 2; // Nửa khoảng cách xs cho mỗi bên của item
+const ITEM_WIDTH = (width - (NUM_COLUMNS + 1) * ITEM_MARGIN * 2) / NUM_COLUMNS; // Tính toán lại chiều rộng item
 
 const SearchScreen = ({ navigation }) => {
   const [searchText, setSearchText] = useState('');
+  const [activeCategory, setActiveCategory] = useState(CATEGORIES[0].id); // Danh mục active đầu tiên
 
   const renderCategory = ({ item }) => (
-    <TouchableOpacity style={styles.categoryItem}>
-      <Text style={styles.categoryText}>{item.name}</Text>
+    <TouchableOpacity
+      style={[
+        styles.categoryItem,
+        activeCategory === item.id && styles.activeCategoryItem,
+      ]}
+      onPress={() => setActiveCategory(item.id)}>
+      <Text
+        style={[
+          styles.categoryText,
+          activeCategory === item.id && styles.activeCategoryText,
+        ]}>
+        {item.name}
+      </Text>
     </TouchableOpacity>
   );
 
-  const renderGridItem = ({ item, index }) => {
-    let itemStyle = { width: ITEM_WIDTH, height: ITEM_WIDTH, margin: SPACING/2 };
-    
-    // Example of different sized items in a grid
-    // You can adjust these conditions based on your design needs
-    if (index === 3) {
-      // Larger item spanning 2 columns
-      itemStyle = { width: ITEM_WIDTH * 2 + SPACING, height: ITEM_WIDTH, margin: SPACING/2 };
-    } else if (index === 4) {
-      // Single column item with different height
-      itemStyle = { width: ITEM_WIDTH, height: ITEM_WIDTH, margin: SPACING/2 };
-    }
-    
+  const renderGridItem = ({ item }) => {
     return (
-      <TouchableOpacity style={itemStyle}>
-        <Image 
-          source={{ uri: item.image }} 
-          style={styles.gridImage} 
+      <TouchableOpacity style={styles.gridItemContainer}>
+        <Image
+          source={{ uri: item.image }}
+          style={styles.gridImage}
           resizeMode="cover"
         />
       </TouchableOpacity>
     );
   };
 
-  const renderExploreGrid = () => {
-    return (
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Explore</Text>
+        <TouchableOpacity onPress={() => { /* Xử lý sự kiện cho icon map */ }}>
+          <Icon name="map-outline" size={26} color={colors.text} />
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.searchContainer}>
+        <Icon name="search-outline" size={20} color={colors.textSecondary} style={styles.searchIcon} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search"
+          placeholderTextColor={colors.textSecondary}
+          value={searchText}
+          onChangeText={setSearchText}
+        />
+      </View>
+
+      <View>
+        <FlatList
+          horizontal
+          data={CATEGORIES}
+          keyExtractor={item => item.id}
+          renderItem={renderCategory}
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.categoryListContent}
+          style={styles.categoryList}
+        />
+      </View>
+
       <FlatList
         data={EXPLORE_POSTS}
         keyExtractor={item => item.id}
         renderItem={renderGridItem}
-        numColumns={3}
-        columnWrapperStyle={styles.gridRow}
+        numColumns={NUM_COLUMNS}
         contentContainerStyle={styles.gridContent}
+        // columnWrapperStyle={styles.gridRow} // Có thể không cần nếu item tự giãn cách
       />
-    );
-  };
-
-  return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.searchBar}>
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search"
-            placeholderTextColor="#8e8e8e"
-            value={searchText}
-            onChangeText={setSearchText}
-          />
-        </View>
-      </View>
-      
-      <FlatList
-        style={styles.categoryList}
-        data={CATEGORIES}
-        keyExtractor={item => item.id}
-        renderItem={renderCategory}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-      />
-      
-      {renderExploreGrid()}
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.white,
   },
   header: {
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    borderBottomWidth: 0.5,
-    borderBottomColor: '#dbdbdb',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    // backgroundColor: colors.white, // Đã set ở safeArea
+    height: 56,
   },
-  searchBar: {
+  headerTitle: {
+    fontSize: typography.fontSize.xl,
+    fontWeight: 'bold',
+    color: colors.text,
+  },
+  searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#efefef',
+    backgroundColor: colors.background, // Nền xám nhạt cho search bar
     borderRadius: 10,
-    paddingHorizontal: 15,
-    height: 36,
+    marginHorizontal: spacing.md,
+    paddingHorizontal: spacing.sm,
+    height: 40,
+    marginBottom: spacing.sm,
+  },
+  searchIcon: {
+    marginRight: spacing.sm,
   },
   searchInput: {
     flex: 1,
-    fontSize: 16,
-    color: '#262626',
+    fontSize: typography.fontSize.md,
+    color: colors.text,
   },
   categoryList: {
-    paddingVertical: 10,
-    marginBottom: 5,
+    maxHeight: 50, // Giới hạn chiều cao của thanh category
+    paddingVertical: spacing.sm,
+  },
+  categoryListContent: {
+    paddingHorizontal: spacing.md,
   },
   categoryItem: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    marginHorizontal: 5,
-    backgroundColor: '#efefef',
-    borderRadius: 6,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    marginRight: spacing.sm,
+    backgroundColor: colors.background, // Nền cho pill
+    borderRadius: 20, // Bo tròn nhiều hơn
+    justifyContent: 'center',
+    alignItems: 'center',
+    height: 36,
+  },
+  activeCategoryItem: {
+    backgroundColor: colors.primary, // Màu nền cho pill active
   },
   categoryText: {
-    fontSize: 14,
+    fontSize: typography.fontSize.sm,
     fontWeight: '500',
-    color: '#262626',
+    color: colors.text,
   },
-  gridRow: {
-    justifyContent: 'flex-start',
+  activeCategoryText: {
+    color: colors.white,
   },
   gridContent: {
-    paddingHorizontal: SPACING/2,
+    paddingHorizontal: ITEM_MARGIN * 2, // Padding ngang cho toàn bộ lưới
+  },
+  gridItemContainer: {
+    width: ITEM_WIDTH,
+    height: ITEM_WIDTH * 1.2, // Ảnh có thể hơi chữ nhật một chút, hoặc để là ITEM_WIDTH cho vuông
+    margin: ITEM_MARGIN,
+    borderRadius: 12, // Bo góc cho item
+    overflow: 'hidden', // Để borderRadius hoạt động với Image
+    backgroundColor: colors.border, // Màu nền placeholder cho ảnh
   },
   gridImage: {
     width: '100%',

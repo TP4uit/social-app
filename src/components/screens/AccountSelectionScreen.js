@@ -1,149 +1,150 @@
 // src/components/screens/AccountSelectionScreen.js
 import React from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  TouchableOpacity, 
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
   Image,
   SafeAreaView,
-  KeyboardAvoidingView,
-  Platform
+  StatusBar,
+  Platform, // Đã thêm ở bước trước
 } from 'react-native';
 import { colors, spacing, typography } from '../../theme';
 
+const PLACEHOLDER_AVATAR = 'https://i.pravatar.cc/150?u=sophia.wright';
+
 const AccountSelectionScreen = ({ navigation }) => {
-  // Handle login with the selected account
+  const user = {
+    avatar: PLACEHOLDER_AVATAR,
+    username: 'sophia.wright',
+    accountType: 'Regular account',
+  };
+
   const handleLogin = () => {
-    // Navigate to the regular login screen
+    // Sửa ở đây:
     navigation.navigate('LoginForm');
   };
-  
-  // Handle switch accounts button
+
   const handleSwitchAccounts = () => {
-    // This could navigate to a screen showing multiple accounts
-    // For now, we'll just go to the regular login form too
+    // Sửa ở đây:
     navigation.navigate('LoginForm');
   };
-  
+
   return (
     <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardAvoid}
-      >
-        <View style={styles.logoContainer}>
-          <Text style={styles.appName}>Drama Social</Text>
-        </View>
-        
-        <View style={styles.profileContainer}>
-          <Image 
-            source={{ uri: 'https://randomuser.me/api/portraits/men/32.jpg' }} 
-            style={styles.profileImage} 
-          />
-          <Text style={styles.username}>jacob_w</Text>
-        </View>
-        
-        <TouchableOpacity 
-          style={styles.loginButton}
-          onPress={handleLogin}
-        >
-          <Text style={styles.loginButtonText}>Log in</Text>
+      <StatusBar barStyle="dark-content" backgroundColor={colors.white} />
+      <View style={styles.contentContainer}>
+        <Text style={styles.appName}>Drama Social</Text>
+
+        <Image source={{ uri: user.avatar }} style={styles.profileImage} />
+        <Text style={styles.username}>{user.username}</Text>
+        <Text style={styles.accountType}>{user.accountType}</Text>
+
+        <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
+          <Text style={styles.loginButtonText}>Log In</Text>
         </TouchableOpacity>
-        
-        <TouchableOpacity 
+
+        <TouchableOpacity
           style={styles.switchAccountButton}
-          onPress={handleSwitchAccounts}
-        >
-          <Text style={styles.switchAccountText}>Switch accounts</Text>
+          onPress={handleSwitchAccounts}>
+          <Text style={styles.switchAccountButtonText}>Switch Accounts</Text>
         </TouchableOpacity>
-        
-        <View style={styles.switchContainer}>
-          <Text style={styles.noAccountText}>Don't have an account? </Text>
-          <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-            <Text style={styles.signupText}>Sign up.</Text>
-          </TouchableOpacity>
-        </View>
-      </KeyboardAvoidingView>
+      </View>
+
+      <View style={styles.footer}>
+        <Text style={styles.noAccountText}>Don't have an account? </Text>
+        {/* Đảm bảo tên màn hình 'Register' là chính xác */}
+        <TouchableOpacity onPress={() => navigation.navigate('Register')}>
+          <Text style={styles.signupText}>Sign up.</Text>
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 };
 
+// Styles giữ nguyên như bạn đã cung cấp ở lần trước
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.white,
   },
-  keyboardAvoid: {
+  contentContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 40,
-  },
-  logoContainer: {
-    alignItems: 'center',
-    marginBottom: 35,
+    paddingHorizontal: spacing.xl,
   },
   appName: {
-    fontSize: 40,
-    fontWeight: '500',
-    fontFamily: Platform.OS === 'ios' ? 'Noteworthy' : 'normal',
-  },
-  profileContainer: {
-    alignItems: 'center',
-    marginBottom: 30,
+    fontSize: typography.fontSize.xxl + 8,
+    fontWeight: 'bold',
+    color: colors.black,
+    marginBottom: spacing.xl + 10,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif-medium',
   },
   profileImage: {
-    width: 75,
-    height: 75,
-    borderRadius: 75/2,
-    marginBottom: 12,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    marginBottom: spacing.md,
   },
   username: {
-    fontSize: 14,
-    color: '#262626',
-    fontWeight: '600',
+    fontSize: typography.fontSize.xl,
+    fontWeight: 'bold',
+    color: colors.black,
+    marginBottom: spacing.xs,
+  },
+  accountType: {
+    fontSize: typography.fontSize.sm,
+    color: colors.textSecondary,
+    marginBottom: spacing.xl + 10,
   },
   loginButton: {
-    height: 44,
-    backgroundColor: '#0095f6',
-    borderRadius: 5,
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: colors.primary,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderRadius: 8,
     width: '100%',
-    marginBottom: 18,
+    alignItems: 'center',
+    marginBottom: spacing.md,
   },
   loginButtonText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 14,
+    color: colors.white,
+    fontSize: typography.fontSize.md,
+    fontWeight: 'bold',
   },
   switchAccountButton: {
-    marginBottom: 30,
+    backgroundColor: '#EFEFF4',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderRadius: 8,
+    width: '100%',
+    alignItems: 'center',
+    marginBottom: spacing.xxl,
   },
-  switchAccountText: {
-    color: '#0095f6',
-    fontSize: 14,
-    fontWeight: '600',
+  switchAccountButtonText: {
+    color: colors.primary,
+    fontSize: typography.fontSize.md,
+    fontWeight: 'bold',
   },
-  switchContainer: {
+  footer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    position: 'absolute',
-    bottom: 20,
-    borderTopWidth: 1,
-    borderTopColor: '#dbdbdb',
-    paddingTop: 15,
+    alignItems: 'center',
+    paddingVertical: spacing.lg,
     width: '100%',
+    position: 'absolute',
+    bottom: 0,
+    backgroundColor: colors.white,
   },
   noAccountText: {
-    color: '#262626',
-    fontSize: 14,
+    fontSize: typography.fontSize.sm,
+    color: colors.textSecondary,
   },
   signupText: {
-    color: '#0095f6',
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: typography.fontSize.sm,
+    color: colors.primary,
+    fontWeight: 'bold',
   },
 });
 
