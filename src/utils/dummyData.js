@@ -275,3 +275,124 @@ export const commentOnPost = (postId, userId, content) => {
   
   return newComment;
 };
+
+export const dummyChats = [
+  {
+    id: 'chat1',
+    users: [dummyUsers[0], dummyUsers[1]], // Liam and Sarah
+    name: dummyUsers[1].name, // Tên người chat cùng
+    avatar: dummyUsers[1].avatar,
+    lastMessage: 'Not bad, just finished a new script. What about you?',
+    time: '2d',
+    unreadCount: 0,
+    messages: [
+      { id: 'msg1', text: "Hey, how's it going?", sender: dummyUsers[0], timestamp: new Date(Date.now() - (2 * 24 * 60 * 60 * 1000) - (3 * 60 * 60 * 1000)).toISOString() }, // 2d 3h ago
+      { id: 'msg2', text: 'Not bad, just finished a new script. What about you?', sender: dummyUsers[1], timestamp: new Date(Date.now() - (2 * 24 * 60 * 60 * 1000) - (2 * 60 * 60 * 1000)).toISOString() }, // 2d 2h ago
+      { id: 'msg3', text: "Cool! I'm working on a short film project. Need any actors?", sender: dummyUsers[0], timestamp: new Date(Date.now() - (2 * 24 * 60 * 60 * 1000) - (1 * 60 * 60 * 1000)).toISOString() }, // 2d 1h ago
+      { id: 'msg4', text: 'Always! Send me your reel.', sender: dummyUsers[1], timestamp: new Date(Date.now() - (2 * 24 * 60 * 60 * 1000) - (30 * 60 * 1000)).toISOString() }, // 2d 30m ago
+      { id: 'msg5', text: 'Will do! Check out this mood board for the film.', sender: dummyUsers[0], image: 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?q=80&w=800&auto=format&fit=crop', timestamp: new Date(Date.now() - (2 * 24 * 60 * 60 * 1000) - (10 * 60 * 1000)).toISOString() }, // 2d 10m ago
+      { id: 'msg6', text: "Looks amazing! I'm in.", sender: dummyUsers[1], timestamp: new Date(Date.now() - (2 * 24 * 60 * 60 * 1000) - (5 * 60 * 1000)).toISOString() }, // 2d 5m ago
+    ],
+  },
+  {
+    id: 'chat2',
+    users: [dummyUsers[0], dummyUsers[2]], // Liam and Alex
+    name: dummyUsers[2].name,
+    avatar: dummyUsers[2].avatar,
+    lastMessage: 'Sounds good, let me know!',
+    time: '17m ago',
+    unreadCount: 2,
+    messages: [
+      { id: 'msg7', text: 'Want to grab coffee later?', sender: dummyUsers[2], timestamp: new Date(Date.now() - (20 * 60 * 1000)).toISOString() }, // 20m ago
+      { id: 'msg8', text: 'Sure, what time works for you?', sender: dummyUsers[0], timestamp: new Date(Date.now() - (18 * 60 * 1000)).toISOString() }, // 18m ago
+      { id: 'msg9', text: 'How about 3 PM at the usual spot?', sender: dummyUsers[2], timestamp: new Date(Date.now() - (17 * 60 * 1000)).toISOString() }, // 17m ago
+      { id: 'msg10', text: 'Sounds good, let me know!', sender: dummyUsers[0], timestamp: new Date(Date.now() - (17 * 60 * 1000)).toISOString() }, // 17m ago
+    ],
+  },
+  {
+    id: 'chat3',
+    users: [dummyUsers[1], dummyUsers[2]], // Sarah and Alex
+    name: 'Project Group', // Ví dụ một group chat
+    avatar: null, // Hoặc một avatar mặc định cho group
+    isGroup: true,
+    lastMessage: "Don't forget the meeting at 10 AM.",
+    time: '1h ago',
+    unreadCount: 0,
+    messages: [
+       { id: 'msg11', text: "Hey team, how's the project coming along?", sender: dummyUsers[1], timestamp: new Date(Date.now() - (2 * 60 * 60 * 1000)).toISOString() }, // 2h ago
+       { id: 'msg12', text: "Making good progress! Should have an update by EOD.", sender: dummyUsers[2], timestamp: new Date(Date.now() - (1.5 * 60 * 60 * 1000)).toISOString() }, // 1.5h ago
+       { id: 'msg13', text: "Great! Don't forget the meeting at 10 AM.", sender: dummyUsers[1], timestamp: new Date(Date.now() - (1 * 60 * 60 * 1000)).toISOString() }, // 1h ago
+    ],
+  },
+   {
+    id: 'chat4',
+    users: [dummyUsers[0]], // Noah (John) and Owen (another user)
+    name: 'Owen Harris', // Tên user theo Figma
+    avatar: 'https://randomuser.me/api/portraits/men/49.jpg',
+    lastMessage: 'Thanks for the feedback!',
+    time: '1h ago',
+    unreadCount: 0,
+    messages: [
+        { id: 'msg14', text: 'Your latest design looks great!', sender: { id: 'user_owen', name: 'Owen Harris', avatar: 'https://randomuser.me/api/portraits/men/49.jpg'}, timestamp: new Date(Date.now() - (1.5 * 60 * 60 * 1000)).toISOString() },
+        { id: 'msg15', text: 'Thanks for the feedback!', sender: dummyUsers[0], timestamp: new Date(Date.now() - (1 * 60 * 60 * 1000)).toISOString() },
+    ],
+  },
+  {
+    id: 'chat5',
+    users: [dummyUsers[0]],
+    name: 'Olivia Davis',
+    avatar: 'https://randomuser.me/api/portraits/women/44.jpg',
+    lastMessage: 'See you then!',
+    time: 'Active yesterday',
+    unreadCount: 1,
+     messages: [
+        { id: 'msg16', text: 'Movie night tomorrow?', sender: { id: 'user_olivia', name: 'Olivia Davis', avatar: 'https://randomuser.me/api/portraits/women/44.jpg'}, timestamp: new Date(Date.now() - (25 * 60 * 60 * 1000)).toISOString() }, // Yesterday
+        { id: 'msg17', text: 'Sounds fun! What time?', sender: dummyUsers[0], timestamp: new Date(Date.now() - (24.5 * 60 * 60 * 1000)).toISOString() },
+        { id: 'msg18', text: '7 PM? My place.', sender: { id: 'user_olivia', name: 'Olivia Davis', avatar: 'https://randomuser.me/api/portraits/women/44.jpg'}, timestamp: new Date(Date.now() - (24 * 60 * 60 * 1000)).toISOString() },
+        { id: 'msg19', text: 'See you then!', sender: dummyUsers[0], timestamp: new Date(Date.now() - (23.5 * 60 * 60 * 1000)).toISOString() },
+    ],
+  },
+    {
+    id: 'chat6',
+    users: [dummyUsers[0]],
+    name: 'Ava Harper',
+    avatar: 'https://randomuser.me/api/portraits/women/42.jpg',
+    lastMessage: 'No worries at all!',
+    time: 'Active now',
+    unreadCount: 0,
+    messages: [
+        { id: 'msg20', text: 'Hey, can you send me that file?', sender: { id: 'user_ava', name: 'Ava Harper', avatar: 'https://randomuser.me/api/portraits/women/42.jpg'}, timestamp: new Date(Date.now() - (10 * 60 * 1000)).toISOString() }, // 10m ago
+        { id: 'msg21', text: 'Sure, just sent it over.', sender: dummyUsers[0], timestamp: new Date(Date.now() - (8 * 60 * 1000)).toISOString() },
+        { id: 'msg22', text: 'Got it, thanks so much!', sender: { id: 'user_ava', name: 'Ava Harper', avatar: 'https://randomuser.me/api/portraits/women/42.jpg'}, timestamp: new Date(Date.now() - (5 * 60 * 1000)).toISOString() },
+        { id: 'msg23', text: 'No worries at all!', sender: dummyUsers[0], timestamp: new Date(Date.now() - (2 * 60 * 1000)).toISOString() },
+    ],
+  },
+];
+
+// Dữ liệu cho phần "Online Users" ở ChatsScreen
+export const dummyOnlineUsers = [
+  { id: 'online1', name: 'Clara Bennett', avatar: 'https://randomuser.me/api/portraits/women/75.jpg' },
+  { id: 'online2', name: 'Ethan Hartley', avatar: 'https://randomuser.me/api/portraits/men/75.jpg' },
+  { id: 'online3', name: 'Caleb Stafford', avatar: 'https://randomuser.me/api/portraits/men/76.jpg' },
+  { id: 'online4', name: 'Sophia Donovan', avatar: 'https://randomuser.me/api/portraits/women/76.jpg' },
+  { id: 'online5', name: 'Amelia Rowe', avatar: 'https://randomuser.me/api/portraits/women/77.jpg' },
+  { id: 'online6', name: 'Lucas Miller', avatar: 'https://randomuser.me/api/portraits/men/78.jpg' },
+];
+
+export const getChats = () => {
+  // Trong thực tế, bạn có thể muốn lọc/sắp xếp các cuộc trò chuyện
+  // Ví dụ: Sắp xếp theo tin nhắn cuối cùng
+  return dummyChats.sort((a, b) => {
+    const lastMsgA = a.messages[a.messages.length - 1];
+    const lastMsgB = b.messages[b.messages.length - 1];
+    return new Date(lastMsgB.timestamp) - new Date(lastMsgA.timestamp);
+  });
+};
+
+export const getChatById = (chatId) => {
+  return dummyChats.find(chat => chat.id === chatId);
+};
+
+export const getOnlineUsers = () => {
+    return dummyOnlineUsers;
+}

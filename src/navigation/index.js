@@ -19,6 +19,9 @@ import SearchScreen from '../components/screens/SearchScreen';
 import NotificationsScreen from '../components/screens/NotificationsScreen';
 import CreatePostScreen from '../components/screens/CreatePostScreen';
 import SettingsScreen from '../components/screens/SettingsScreen';
+import ChatsScreen from '../components/screens/ChatsScreen';
+import GroupChatScreen from '../components/screens/GroupChatScreen';
+import EditProfileScreen from '../components/screens/EditProfileScreen';
 
 // Create navigators
 const Stack = createNativeStackNavigator();
@@ -131,6 +134,9 @@ const AppNavigator = () => {
           <Stack.Navigator screenOptions={{ headerShown: false }}>
             <Stack.Screen name="Main" component={TabNavigator} />
             <Stack.Screen name="Settings" component={SettingsScreen} />
+            <Stack.Screen name="Chats" component={ChatsScreen} />
+            <Stack.Screen name="GroupChat" component={GroupChatScreen} />
+            <Stack.Screen name="EditProfile" component={EditProfileScreen} />
           </Stack.Navigator>
         ) : (
           <AuthNavigator />

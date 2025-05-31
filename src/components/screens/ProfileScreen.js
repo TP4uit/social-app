@@ -79,6 +79,10 @@ const ProfileScreen = ({ navigation }) => {
     navigation.navigate('Settings');
   };
 
+  const handleGoToEditProfile = () => {
+    navigation.navigate('EditProfile'); // Điều hướng đến EditProfileScreen
+  };
+
   // Component render từng Highlight Item
   const HighlightItem = ({ item }) => (
     <TouchableOpacity style={styles.highlightItem}>
@@ -148,7 +152,10 @@ const ProfileScreen = ({ navigation }) => {
 
       {/* Action Buttons (Edit Profile, Settings) */}
       <View style={styles.actionButtonsContainer}>
-        <TouchableOpacity style={[styles.actionButton, styles.editProfileButton]}>
+        <TouchableOpacity
+          style={[styles.actionButton, styles.editProfileButton]}
+          onPress={handleGoToEditProfile} // Gọi hàm điều hướng
+        >
           <Text style={styles.actionButtonText}>Edit Profile</Text>
         </TouchableOpacity>
         <TouchableOpacity

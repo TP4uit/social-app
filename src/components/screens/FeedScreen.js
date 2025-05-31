@@ -173,7 +173,10 @@ const FeedScreen = ({ navigation }) => { // Thêm navigation prop
           <Icon name="add-circle-outline" size={28} color={colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerLogo}>Drama Social</Text>
-        <TouchableOpacity style={styles.headerIconContainer} onPress={() => {/* Navigate to Chat/Messenger */}}>
+        <TouchableOpacity 
+          style={styles.headerIconContainer} 
+          onPress={() => navigation.navigate('Chats')} // Điều hướng đến ChatsScreen
+        >
           <Icon name="chatbubble-ellipses-outline" size={26} color={colors.text} />
         </TouchableOpacity>
       </View>
