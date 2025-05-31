@@ -40,7 +40,7 @@ const GroupChatScreen = ({ route, navigation }) => {
             const otherUser = chatDetails.users.find(u => u.id !== user.id);
             setChatName(otherUser ? otherUser.name : chatDetails.name || 'Chat');
             setChatAvatar(otherUser ? otherUser.avatar : chatDetails.avatar);
-        } else if (!initialChatName && chatDetails.name) { // Fallback nếu không có users array hoặc user
+        } else if (!initialChatName && chatDetails.name) { 
             setChatName(chatDetails.name);
             setChatAvatar(chatDetails.avatar);
         }
@@ -49,13 +49,26 @@ const GroupChatScreen = ({ route, navigation }) => {
     fetchChatData();
   }, [chatId, initialChatName, initialChatAvatar]);
 
+  useEffect(() => {
+    if (route.params?.imageUri && route.params?.targetChatId === chatId && currentUser) {
+      const newImageMessage = {
+        id: `msg${Date.now()}`,
+        image: route.params.imageUri,
+        sender: currentUser,
+        timestamp: new Date().toISOString(),
+      };
+      setMessages(prevMessages => [...prevMessages, newImageMessage]);
+      navigation.setParams({ imageUri: null, targetChatId: null });
+      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
+    }
+  }, [route.params?.imageUri, route.params?.targetChatId, currentUser, chatId, navigation]);
 
   const handleSendMessage = () => {
     if (inputText.trim() === '' || !currentUser) return;
     const newMessage = {
       id: `msg${Date.now()}`,
       text: inputText,
-      sender: currentUser, // Sử dụng toàn bộ đối tượng user hiện tại
+      sender: currentUser,
       timestamp: new Date().toISOString(),
     };
     setMessages(prevMessages => [...prevMessages, newMessage]);
@@ -65,7 +78,6 @@ const GroupChatScreen = ({ route, navigation }) => {
 
   const MessageItem = ({ item }) => {
     const isCurrentUser = item.sender.id === currentUser?.id;
-    // Sử dụng avatar từ sender, nếu không có thì dùng default
     const senderAvatar = item.sender.avatar || (isCurrentUser ? (currentUser?.avatar || DEFAULT_AVATAR_CURRENT) : DEFAULT_AVATAR_OTHER);
 
     return (
@@ -95,7 +107,6 @@ const GroupChatScreen = ({ route, navigation }) => {
     );
   };
 
-
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.white} />
@@ -113,13 +124,13 @@ const GroupChatScreen = ({ route, navigation }) => {
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.keyboardAvoidingContainer}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 60 : 0} // Điều chỉnh offset cho header
+        keyboardVerticalOffset={Platform.OS === "ios" ? 60 : 0} 
       >
         <FlatList
           ref={flatListRef}
           data={messages}
           renderItem={MessageItem}
-          keyExtractor={item => item.id.toString()} // Đảm bảo key là string
+          keyExtractor={item => item.id.toString()}
           contentContainerStyle={styles.messagesListContent}
           showsVerticalScrollIndicator={false}
           onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: false })}
@@ -127,6 +138,18 @@ const GroupChatScreen = ({ route, navigation }) => {
         />
 
         <View style={styles.inputContainer}>
+          <TouchableOpacity 
+            onPress={() => navigation.navigate('Camera', { source: 'Chat', chatId: chatId })}
+            style={styles.inputActionButton}
+          >
+            <Icon name="camera-outline" size={24} color={colors.primary} />
+          </TouchableOpacity>
+          <TouchableOpacity 
+            onPress={() => navigation.navigate('Camera', { source: 'Chat', chatId: chatId, pickOnly: true })}
+            style={styles.inputActionButton}
+          >
+            <Icon name="image-outline" size={24} color={colors.primary} />
+          </TouchableOpacity>
           <TextInput
             style={styles.textInput}
             placeholder="Type a message..."
@@ -135,12 +158,6 @@ const GroupChatScreen = ({ route, navigation }) => {
             onChangeText={setInputText}
             multiline
           />
-          <TouchableOpacity onPress={() => {/* Mở image picker */}} style={styles.inputActionButton}>
-            <Icon name="image-outline" size={24} color={colors.primary} />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => {/* Mở camera */}} style={styles.inputActionButton}>
-            <Icon name="camera-outline" size={24} color={colors.primary} />
-          </TouchableOpacity>
           <TouchableOpacity onPress={handleSendMessage} style={[styles.inputActionButton, styles.sendButton]} disabled={inputText.trim() === ''}>
             <Icon name="paper-plane-outline" size={24} color={colors.white} />
           </TouchableOpacity>
@@ -227,19 +244,20 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs / 2,
     fontWeight: '500',
   },
-  messageText: { // Style chung cho text tin nhắn
+  messageText: { 
     fontSize: typography.fontSize.md,
-    color: colors.text, // Màu mặc định (cho tin nhắn của người khác)
+    color: colors.text, 
     lineHeight: typography.fontSize.md * 1.4,
   },
-  currentUserMessageText: { // Style riêng cho text tin nhắn của người dùng hiện tại
-    color: colors.white, // Chữ màu trắng
+  currentUserMessageText: { 
+    color: colors.white, 
   },
   messageImage: {
     width: 200,
     height: 150,
     borderRadius: 10,
     marginTop: spacing.xs,
+    backgroundColor: colors.border, // Placeholder
   },
   timestampText: {
     fontSize: typography.fontSize.xs - 2,
@@ -263,20 +281,20 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     borderRadius: 20,
     paddingHorizontal: spacing.md,
-    paddingVertical: Platform.OS === 'ios' ? spacing.sm : spacing.xs -2, // Điều chỉnh padding cho Android
+    paddingVertical: Platform.OS === 'ios' ? spacing.sm : spacing.xs -2, 
     fontSize: typography.fontSize.md,
     color: colors.text,
-    marginRight: spacing.sm,
+    marginHorizontal: spacing.xs, // Thêm khoảng cách giữa các nút và input
   },
   inputActionButton: {
-    paddingHorizontal: spacing.sm, // Tăng padding ngang cho dễ nhấn
+    paddingHorizontal: spacing.sm, 
     paddingVertical: spacing.xs,
   },
   sendButton: {
     backgroundColor: colors.primary,
     borderRadius: 20,
-    padding: spacing.sm - (Platform.OS === 'ios' ? 2 : 4), // Điều chỉnh padding icon cho cân đối
-    marginLeft: spacing.xs, // Thêm khoảng cách nhỏ
+    padding: spacing.sm - (Platform.OS === 'ios' ? 2 : 4), 
+    // marginLeft: spacing.xs, // Không cần nếu textInput đã có marginHorizontal
   },
 });
 

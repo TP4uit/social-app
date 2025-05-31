@@ -14,14 +14,13 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { colors, spacing, typography } from '../../theme';
-import { useAuth } from '../../hooks/useAuth'; // Để lấy thông tin người dùng hiện tại
-// Giả sử chúng ta sẽ cập nhật dummyUser, cần import thêm
-import { dummyUsers } from '../../utils/dummyData';
+import { useAuth } from '../../hooks/useAuth';
+import { dummyUsers } from '../../utils/dummyData'; // Giữ lại để cập nhật mock
 
 const DEFAULT_AVATAR = 'https://i.pravatar.cc/150?u=defaultUser';
 
-const EditProfileScreen = ({ navigation }) => {
-  const { user: currentUser, loading: authLoading } = useAuth(); // Lấy user từ hook
+const EditProfileScreen = ({ navigation, route }) => {
+  const { user: currentUser, loading: authLoading } = useAuth();
   const [profileData, setProfileData] = useState({
     name: '',
     username: '',
@@ -29,7 +28,7 @@ const EditProfileScreen = ({ navigation }) => {
     website: '',
     pronouns: '',
     avatar: DEFAULT_AVATAR,
-    email: '', // Email và phone sẽ không cho sửa trực tiếp ở đây
+    email: '',
     phone: '',
   });
   const [isLoading, setIsLoading] = useState(false);
@@ -38,17 +37,23 @@ const EditProfileScreen = ({ navigation }) => {
     if (currentUser) {
       setProfileData({
         name: currentUser.name || '',
-        // Giả sử username lấy từ email, hoặc bạn có trường username riêng
         username: currentUser.username || currentUser.email?.split('@')[0] || '',
         bio: currentUser.bio || '',
         website: currentUser.website || '',
-        pronouns: currentUser.pronouns || '', // Thêm pronouns nếu có
+        pronouns: currentUser.pronouns || '',
         avatar: currentUser.avatar || DEFAULT_AVATAR,
         email: currentUser.email || '',
-        phone: currentUser.phone || 'N/A', // Giả sử có trường phone
+        phone: currentUser.phone || 'N/A',
       });
     }
   }, [currentUser]);
+
+  useEffect(() => {
+    if (route.params?.imageUri) {
+      setProfileData(prev => ({ ...prev, avatar: route.params.imageUri }));
+      navigation.setParams({ imageUri: null });
+    }
+  }, [route.params?.imageUri, navigation]);
 
   const handleInputChange = (field, value) => {
     setProfileData(prev => ({ ...prev, [field]: value }));
@@ -58,40 +63,32 @@ const EditProfileScreen = ({ navigation }) => {
     setIsLoading(true);
     console.log('Saving profile data:', profileData);
 
-    // --- Logic cập nhật Dummy Data (Tùy chọn) ---
-    // Trong ứng dụng thực tế, bạn sẽ gọi API ở đây.
-    // Để demo, chúng ta có thể thử cập nhật dummyUsers array.
     if (currentUser) {
       const userIndex = dummyUsers.findIndex(u => u.id === currentUser.id);
       if (userIndex !== -1) {
         dummyUsers[userIndex] = {
           ...dummyUsers[userIndex],
           name: profileData.name,
-          // username: profileData.username, // Cẩn thận nếu username là email
           bio: profileData.bio,
-          avatar: profileData.avatar, // Giả sử avatar có thể thay đổi (cần logic chọn ảnh)
+          avatar: profileData.avatar,
           website: profileData.website,
           pronouns: profileData.pronouns,
+          // Không cập nhật username từ đây nếu nó là email
         };
         console.log('Dummy user updated:', dummyUsers[userIndex]);
       }
     }
-    // --- Kết thúc Logic cập nhật Dummy Data ---
 
-    // Giả lập quá trình lưu
     setTimeout(() => {
       setIsLoading(false);
       Alert.alert('Profile Saved', 'Your profile has been updated (mock).', [
         { text: 'OK', onPress: () => navigation.goBack() },
       ]);
-      // navigation.goBack(); // Quay lại màn hình Profile
     }, 1000);
   };
 
   const handleEditProfilePhoto = () => {
-    Alert.alert('Edit Photo', 'Functionality to change profile photo is not implemented yet.');
-    // TODO: Implement image picker logic
-    // Ví dụ: setProfileData(prev => ({ ...prev, avatar: 'new_image_uri' }));
+    navigation.navigate('Camera', { source: 'EditProfile' });
   };
 
   if (authLoading && !currentUser) {
@@ -280,16 +277,16 @@ const styles = StyleSheet.create({
     height: 120,
     borderRadius: 60,
     marginBottom: spacing.md,
-    backgroundColor: colors.border, // Placeholder color
+    backgroundColor: colors.border, 
   },
   editPhotoButton: {
-    backgroundColor: colors.background, // Màu xám nhạt như Figma
+    backgroundColor: colors.background, 
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.lg,
     borderRadius: 8,
   },
   editPhotoButtonText: {
-    color: colors.primary, // Chữ màu xanh
+    color: colors.primary, 
     fontSize: typography.fontSize.sm,
     fontWeight: '500',
   },
@@ -303,20 +300,20 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   input: {
-    backgroundColor: colors.background, // Nền input xám nhạt
+    backgroundColor: colors.background, 
     borderRadius: 8,
     paddingHorizontal: spacing.md,
-    paddingVertical: Platform.OS === 'ios' ? spacing.md -2 : spacing.sm -2 , // Điều chỉnh padding
+    paddingVertical: Platform.OS === 'ios' ? spacing.md -2 : spacing.sm -2 , 
     fontSize: typography.fontSize.md,
     color: colors.text,
     borderWidth: 1,
-    borderColor: colors.border, // Viền mờ
-    height: 50, // Chiều cao cố định cho input một dòng
+    borderColor: colors.border, 
+    height: 50, 
   },
   bioInput: {
-    height: 100, // Chiều cao cho bio input
-    textAlignVertical: 'top', // Quan trọng cho Android
-    paddingTop: spacing.sm, // Điều chỉnh padding top cho multiline
+    height: 100, 
+    textAlignVertical: 'top', 
+    paddingTop: spacing.sm, 
   },
   sectionTitleSeparator: {
     fontSize: typography.fontSize.lg,

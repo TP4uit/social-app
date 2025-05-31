@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Image, Dimensions, SafeAreaView, Alert } from 'react-native';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import { View, Text, TouchableOpacity, StyleSheet, Image, Dimensions, SafeAreaView, Alert, ActivityIndicator, Platform } from 'react-native';
 import { Camera, CameraType, FlashMode } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -7,30 +8,54 @@ import { colors, spacing, typography } from '../../theme';
 
 const { width } = Dimensions.get('window');
 
-const CameraScreen = ({ navigation }) => {
+const CameraScreen = () => {
+  const navigation = useNavigation(); // SỬ DỤNG HOOK
+  const route = useRoute();       // SỬ DỤNG HOOK
+
+  console.log('--- CameraScreen Mounted (with hooks) ---');
+  console.log('Hook Navigation:', JSON.stringify(navigation, null, 2));
+  console.log('Hook Route:', JSON.stringify(route, null, 2));
+  const { source, chatId, pickOnly } = route.params || {};
+
   const [hasCameraPermission, setHasCameraPermission] = useState(null);
   const [hasMediaLibraryPermission, setHasMediaLibraryPermission] = useState(null);
   const [type, setType] = useState(CameraType.back);
   const [flash, setFlash] = useState(FlashMode.off);
-  const [capturedImage, setCapturedImage] = useState(null); // Để lưu ảnh đã chụp/chọn
+  const [capturedImage, setCapturedImage] = useState(null);
+  const [isLoadingPermissions, setIsLoadingPermissions] = useState(true);
+  const handleClosePress = () => {
+    if (navigation && typeof navigation.goBack === 'function') {
+      navigation.goBack();
+    } else {
+      console.error("Hook navigation.goBack is not available");
+    }
+  };
 
   const cameraRef = useRef(null);
 
   useEffect(() => {
     (async () => {
+      setIsLoadingPermissions(true);
       const cameraStatus = await Camera.requestCameraPermissionsAsync();
       setHasCameraPermission(cameraStatus.status === 'granted');
 
       const mediaLibraryStatus = await ImagePicker.requestMediaLibraryPermissionsAsync();
       setHasMediaLibraryPermission(mediaLibraryStatus.status === 'granted');
+      setIsLoadingPermissions(false);
     })();
   }, []);
+
+  useEffect(() => {
+    if (pickOnly && hasMediaLibraryPermission && !isLoadingPermissions && !capturedImage) {
+      pickImage();
+    }
+  }, [pickOnly, hasMediaLibraryPermission, isLoadingPermissions, capturedImage]);
 
   const takePicture = async () => {
     if (cameraRef.current) {
       try {
         const data = await cameraRef.current.takePictureAsync({
-          quality: 0.7, // Giảm chất lượng để ảnh nhẹ hơn
+          quality: 0.7,
         });
         setCapturedImage(data.uri);
       } catch (error) {
@@ -42,23 +67,27 @@ const CameraScreen = ({ navigation }) => {
 
   const pickImage = async () => {
     if (!hasMediaLibraryPermission) {
-        Alert.alert('Permission Denied', 'Sorry, we need media library permissions to make this work!');
-        return;
+      Alert.alert('Permission Denied', 'Sorry, we need media library permissions to make this work!');
+      if (pickOnly) navigation.goBack();
+      return;
     }
     try {
       let result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images, // Chỉ chọn ảnh
-        allowsEditing: true, // Cho phép chỉnh sửa cơ bản
-        aspect: [4, 3], // Tỷ lệ khung hình (tùy chọn)
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
         quality: 0.7,
       });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
         setCapturedImage(result.assets[0].uri);
+      } else if (pickOnly && result.canceled) {
+        navigation.goBack();
       }
     } catch (error) {
       console.log('Error picking image:', error);
       Alert.alert('Error', 'Could not pick image from library.');
+      if (pickOnly) navigation.goBack();
     }
   };
 
@@ -76,35 +105,77 @@ const CameraScreen = ({ navigation }) => {
 
   const getFlashIconName = () => {
     if (flash === FlashMode.on) return 'flash';
-    if (flash === FlashMode.auto) return 'flash-outline'; // Icon cho auto, hoặc có thể dùng 'flash-auto-outline' nếu có
+    if (flash === FlashMode.auto) return 'flash-outline';
     return 'flash-off';
   };
 
   const handleUseImage = () => {
     if (capturedImage) {
-      // Điều hướng đến CreatePostScreen và truyền URI ảnh
-      navigation.navigate('CreatePost', { imageUri: capturedImage });
-      setCapturedImage(null); // Reset lại để có thể chụp/chọn ảnh mới
+      if (source === 'CreatePost') {
+        navigation.navigate({ name: 'CreatePost', params: { imageUri: capturedImage }, merge: true });
+      } else if (source === 'Chat' && chatId) {
+        navigation.navigate({ name: 'GroupChat', params: { imageUri: capturedImage, targetChatId: chatId }, merge: true });
+      } else if (source === 'EditProfile') {
+        navigation.navigate({ name: 'EditProfile', params: { imageUri: capturedImage }, merge: true });
+      } else {
+        Alert.alert('Image Selected', 'No specific destination for this image.');
+        navigation.goBack();
+      }
+      setCapturedImage(null);
     }
   };
 
-
-  if (hasCameraPermission === null) {
-    return <View style={styles.permissionContainer}><Text>Requesting camera permission...</Text></View>;
+  if (isLoadingPermissions) {
+    return (
+      <SafeAreaView style={styles.permissionContainer}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text>Requesting permissions...</Text>
+      </SafeAreaView>
+    );
   }
-  if (hasCameraPermission === false) {
-    return <View style={styles.permissionContainer}><Text>No access to camera. Please enable it in settings.</Text></View>;
+
+  if (!hasCameraPermission && !pickOnly) {
+    return (
+      <SafeAreaView style={styles.permissionContainer}>
+        <Text>No access to camera. Please enable it in settings.</Text>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.simpleButton}>
+          <Text style={styles.simpleButtonText}>Go Back</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    );
   }
 
-  // Nếu có ảnh đã chụp/chọn, hiển thị màn hình preview
+  if (pickOnly && !hasMediaLibraryPermission && !capturedImage) {
+     return (
+      <SafeAreaView style={styles.permissionContainer}>
+        <Text>No access to media library. Please enable it in settings.</Text>
+         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.simpleButton}>
+          <Text style={styles.simpleButtonText}>Go Back</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    );
+  }
+  
+  if (pickOnly && !capturedImage && hasMediaLibraryPermission) {
+     return (
+      <SafeAreaView style={styles.permissionContainer}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text>Opening image library...</Text>
+      </SafeAreaView>
+    );
+  }
+
   if (capturedImage) {
     return (
       <SafeAreaView style={styles.previewContainer}>
         <Image source={{ uri: capturedImage }} style={styles.previewImage} />
         <View style={styles.previewActions}>
-          <TouchableOpacity onPress={() => setCapturedImage(null)} style={styles.previewButton}>
+          <TouchableOpacity onPress={() => {
+            setCapturedImage(null);
+            if (pickOnly) pickImage();
+          }} style={styles.previewButton}>
             <Icon name="close-circle-outline" size={30} color={colors.white} />
-            <Text style={styles.previewButtonText}>Retake</Text>
+            <Text style={styles.previewButtonText}>{pickOnly ? "Reselect" : "Retake"}</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={handleUseImage} style={styles.previewButton}>
             <Icon name="checkmark-circle-outline" size={30} color={colors.white} />
@@ -114,11 +185,12 @@ const CameraScreen = ({ navigation }) => {
       </SafeAreaView>
     );
   }
+  
+  if (pickOnly) return null; 
 
-  // Giao diện camera chính
   return (
     <SafeAreaView style={styles.container}>
-      <Camera style={styles.camera} type={type} flashMode={flash} ref={cameraRef} ratio="16:9">
+       <Camera style={styles.camera} type={type} flashMode={flash} ref={cameraRef} ratio="16:9">
         <View style={styles.topControls}>
           <TouchableOpacity style={styles.controlButton} onPress={() => navigation.goBack()}>
             <Icon name="close-outline" size={30} color={colors.white} />
@@ -129,13 +201,9 @@ const CameraScreen = ({ navigation }) => {
         </View>
       </Camera>
       <View style={styles.bottomContainer}>
-        {/* Thanh chế độ chụp (TYPE, LIVE, NORMAL, BOOMERANG, SUPERZOOM) */}
-        {/* Hiện tại chúng ta sẽ giữ thanh này đơn giản, chỉ hiển thị "NORMAL" */}
         <View style={styles.modeSelector}>
             <Text style={[styles.modeText, styles.activeModeText]}>NORMAL</Text>
-            {/* Bạn có thể thêm các Text khác ở đây cho các chế độ khác và style chúng */}
         </View>
-
         <View style={styles.bottomControls}>
           <TouchableOpacity style={styles.controlButton} onPress={pickImage}>
             <Icon name="images-outline" size={30} color={colors.text} />
@@ -162,16 +230,28 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: spacing.md,
+    backgroundColor: colors.white,
+  },
+  simpleButton: {
+    marginTop: spacing.lg,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    backgroundColor: colors.primary,
+    borderRadius: 8,
+  },
+  simpleButtonText: {
+    color: colors.white,
+    fontSize: typography.fontSize.md,
+    fontWeight: 'bold',
   },
   camera: {
-    flex: 1, // Để camera chiếm phần lớn không gian
-    // aspectRatio: 9 / 16, // Đảm bảo tỷ lệ khung hình
+    flex: 1,
   },
   topControls: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg, // Hoặc Platform.OS === 'ios' ? 44 : spacing.md, nếu dùng SafeAreaView
+    paddingTop: Platform.OS === 'android' ? spacing.lg : spacing.xxl, // Adjusted for Android status bar
     position: 'absolute',
     top: 0,
     left: 0,
@@ -179,8 +259,8 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
    bottomContainer: {
-    height: 160, // Chiều cao cho khu vực điều khiển dưới cùng
-    backgroundColor: colors.white, // Nền trắng cho khu vực này
+    height: 160, 
+    backgroundColor: colors.white, 
     justifyContent: 'space-around',
     paddingBottom: spacing.md,
   },
@@ -189,8 +269,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: spacing.sm,
-    // borderBottomWidth: 1, // Nếu muốn có đường kẻ phân cách
-    // borderBottomColor: colors.border,
   },
   modeText: {
     fontSize: typography.fontSize.sm,
@@ -199,7 +277,7 @@ const styles = StyleSheet.create({
     marginHorizontal: spacing.md,
   },
   activeModeText: {
-    color: colors.primary, // Hoặc màu đen
+    color: colors.primary, 
     fontWeight: 'bold',
   },
   bottomControls: {
@@ -207,7 +285,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     alignItems: 'center',
     paddingHorizontal: spacing.lg,
-    // paddingVertical: spacing.lg, // Đã có padding ở bottomContainer
   },
   controlButton: {
     padding: spacing.sm,
@@ -216,19 +293,19 @@ const styles = StyleSheet.create({
     width: 70,
     height: 70,
     borderRadius: 35,
-    backgroundColor: 'transparent', // Không có màu nền bên ngoài
+    backgroundColor: 'transparent', 
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 4,
-    borderColor: colors.text, // Viền ngoài màu đen hoặc xám đậm
+    borderColor: colors.text, 
   },
   captureButtonInner: {
     width: 58,
     height: 58,
     borderRadius: 29,
-    backgroundColor: colors.white, // Nút chụp màu trắng bên trong
+    backgroundColor: colors.white, 
     borderWidth: 2,
-    borderColor: colors.black, // Viền nhỏ màu đen cho nút trắng
+    borderColor: colors.black, 
   },
   previewContainer: {
     flex: 1,
@@ -238,7 +315,7 @@ const styles = StyleSheet.create({
   },
   previewImage: {
     width: width,
-    height: width * (16/9), // Giả sử tỷ lệ 16:9, bạn có thể điều chỉnh
+    height: width * (16/9), 
     resizeMode: 'contain',
   },
   previewActions: {

@@ -13,27 +13,34 @@ import {
   ScrollView
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
-import { createPost as createPostAction } from '../../redux/actions/postsActions'; // Đổi tên để tránh trùng với tên component
+import { createPost as createPostAction } from '../../redux/actions/postsActions';
 import { colors, spacing, typography } from '../../theme';
-import { useAuth } from '../../hooks/useAuth'; // Để lấy thông tin user
-import Icon from 'react-native-vector-icons/Ionicons'; // Sử dụng Ionicons
+import { useAuth } from '../../hooks/useAuth';
+import Icon from 'react-native-vector-icons/Ionicons';
 
-// Placeholder avatar nếu user không có
 const DEFAULT_AVATAR = 'https://i.pravatar.cc/150?u=defaultUser';
 
-const CreatePostScreen = ({ navigation }) => {
+const CreatePostScreen = ({ navigation, route }) => {
   const [content, setContent] = useState('');
   const [contentError, setContentError] = useState('');
+  const [imageUri, setImageUri] = useState(null);
 
   const dispatch = useDispatch();
   const { creating, createError } = useSelector(state => state.posts);
-  const { user } = useAuth(); // Lấy thông tin người dùng hiện tại
+  const { user } = useAuth();
 
   const currentUserAvatar = user?.avatar || DEFAULT_AVATAR;
 
+  useEffect(() => {
+    if (route.params?.imageUri) {
+      setImageUri(route.params.imageUri);
+      navigation.setParams({ imageUri: null });
+    }
+  }, [route.params?.imageUri, navigation]);
+
   const validateForm = () => {
-    if (!content.trim()) {
-      setContentError('Please write something for your post.');
+    if (!content.trim() && !imageUri) { // Cần có nội dung hoặc ảnh
+      setContentError('Please write something or add an image for your post.');
       return false;
     }
     setContentError('');
@@ -44,12 +51,12 @@ const CreatePostScreen = ({ navigation }) => {
     if (!validateForm()) return;
 
     try {
-      await dispatch(createPostAction({ content })); // Sử dụng tên đã đổi
+      await dispatch(createPostAction({ content, image: imageUri }));
       setContent('');
+      setImageUri(null);
       navigation.navigate('Feed');
     } catch (error) {
       console.log('Create post error:', error);
-      // Lỗi đã được xử lý bởi redux state (createError)
     }
   };
 
@@ -64,11 +71,11 @@ const CreatePostScreen = ({ navigation }) => {
         <TouchableOpacity
           onPress={handleCreatePost}
           style={styles.headerButton}
-          disabled={creating || !content.trim()} // Disable khi đang tạo hoặc không có nội dung
+          disabled={creating || (!content.trim() && !imageUri) }
         >
           <Text style={[
             styles.postButtonText,
-            (!content.trim() || creating) && styles.postButtonTextDisabled
+            (!content.trim() && !imageUri || creating) && styles.postButtonTextDisabled
           ]}>
             Post
           </Text>
@@ -79,7 +86,6 @@ const CreatePostScreen = ({ navigation }) => {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardAvoid}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : -StatusBar.currentHeight || 0}
-
       >
         <ScrollView contentContainerStyle={styles.scrollContentContainer} keyboardShouldPersistTaps="handled">
           <View style={styles.mainContentContainer}>
@@ -91,24 +97,43 @@ const CreatePostScreen = ({ navigation }) => {
                 value={content}
                 onChangeText={text => {
                   setContent(text);
-                  if (contentError && text.trim()) setContentError('');
+                  if (contentError && (text.trim() || imageUri)) setContentError('');
                 }}
                 multiline
                 style={styles.textInput}
-                scrollEnabled={true} // Cho phép cuộn nếu text dài
-                maxHeight={200} // Giới hạn chiều cao tối đa, có thể điều chỉnh
+                scrollEnabled={true}
+                maxHeight={200}
               />
             </View>
             {contentError ? <Text style={styles.inlineErrorText}>{contentError}</Text> : null}
-            {createError && ( // Hiển thị lỗi chung từ API
+            
+            {imageUri && (
+              <View style={styles.imagePreviewContainer}>
+                <Image source={{ uri: imageUri }} style={styles.previewImage} />
+                <TouchableOpacity onPress={() => setImageUri(null)} style={styles.removeImageButton}>
+                  <Icon name="close-circle" size={28} color={colors.error} />
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {createError && (
                 <View style={styles.apiErrorContainer}>
                     <Text style={styles.apiErrorText}>{createError}</Text>
                 </View>
             )}
 
             <View style={styles.iconToolbar}>
-              <TouchableOpacity style={styles.toolbarIconWrapper}>
+              <TouchableOpacity 
+                style={styles.toolbarIconWrapper}
+                onPress={() => navigation.navigate('Camera', { source: 'CreatePost' })}
+              >
                 <Icon name="camera-outline" size={26} color={colors.primary} />
+              </TouchableOpacity>
+               <TouchableOpacity 
+                style={styles.toolbarIconWrapper}
+                onPress={() => navigation.navigate('Camera', { source: 'CreatePost', pickOnly: true })}
+              >
+                <Icon name="images-outline" size={26} color={colors.primary} />
               </TouchableOpacity>
               <TouchableOpacity style={styles.toolbarIconWrapper}>
                 <Icon name="pricetag-outline" size={24} color={colors.textSecondary} />
@@ -147,7 +172,7 @@ const styles = StyleSheet.create({
   },
   headerButton: {
     padding: spacing.xs,
-    minWidth: 50, // Đảm bảo vùng nhấn đủ rộng
+    minWidth: 50,
     alignItems: 'center',
   },
   headerTitle: {
@@ -161,7 +186,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   postButtonTextDisabled: {
-    color: colors.textSecondary, // Màu chữ mờ đi khi disable
+    color: colors.textSecondary,
   },
   keyboardAvoid: {
     flex: 1,
@@ -170,31 +195,31 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   mainContentContainer: {
-    flex: 1, // Để toolbar đẩy xuống dưới nếu text input không chiếm hết
+    flex: 1,
     padding: spacing.md,
     margin: spacing.md,
-    backgroundColor: colors.white, // Hoặc một màu nền rất nhạt nếu cần
-    borderRadius: 12, // Bo góc cho container
+    backgroundColor: colors.white,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: colors.border, // Viền mờ
+    borderColor: colors.border,
   },
   inputArea: {
     flexDirection: 'row',
-    alignItems: 'flex-start', // Để avatar ở trên cùng
+    alignItems: 'flex-start',
   },
   avatar: {
     width: 40,
     height: 40,
     borderRadius: 20,
     marginRight: spacing.sm,
-    marginTop: spacing.xs, // Căn chỉnh với dòng text đầu tiên
+    marginTop: spacing.xs,
   },
   textInput: {
     flex: 1,
     fontSize: typography.fontSize.md,
     color: colors.text,
-    textAlignVertical: 'top', // Quan trọng cho multiline trên Android
-    paddingTop: Platform.OS === 'ios' ? spacing.sm : spacing.xs, // Điều chỉnh padding
+    textAlignVertical: 'top',
+    paddingTop: Platform.OS === 'ios' ? spacing.sm : spacing.xs,
     paddingBottom: spacing.sm,
     lineHeight: typography.fontSize.md * 1.5,
   },
@@ -202,7 +227,7 @@ const styles = StyleSheet.create({
     color: colors.error,
     fontSize: typography.fontSize.sm,
     marginTop: spacing.xs,
-    marginLeft: 50, // Căn thẳng với TextInput
+    marginLeft: 50, 
   },
   apiErrorContainer: {
     backgroundColor: '#FEEEF0',
@@ -221,13 +246,33 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     alignItems: 'center',
     paddingTop: spacing.md,
-    marginTop: 'auto', // Đẩy toolbar xuống cuối mainContentContainer
+    marginTop: 'auto',
     borderTopWidth: 1,
     borderTopColor: colors.border,
-    paddingHorizontal: spacing.sm, // Thêm padding ngang cho toolbar
+    paddingHorizontal: spacing.sm,
   },
   toolbarIconWrapper: {
     padding: spacing.sm,
+  },
+  imagePreviewContainer: {
+    marginTop: spacing.md,
+    marginBottom: spacing.md,
+    alignItems: 'center',
+    position: 'relative',
+  },
+  previewImage: {
+    width: '100%',
+    aspectRatio: 1, // Hoặc một tỷ lệ khác bạn muốn
+    borderRadius: 8,
+    resizeMode: 'cover',
+  },
+  removeImageButton: {
+    position: 'absolute',
+    top: spacing.xs,
+    right: spacing.xs,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    borderRadius: 14,
+    padding: 3,
   },
 });
 

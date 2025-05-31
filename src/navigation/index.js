@@ -22,6 +22,7 @@ import SettingsScreen from '../components/screens/SettingsScreen';
 import ChatsScreen from '../components/screens/ChatsScreen';
 import GroupChatScreen from '../components/screens/GroupChatScreen';
 import EditProfileScreen from '../components/screens/EditProfileScreen';
+import CameraScreen from '../components/screens/CameraScreen';
 
 // Create navigators
 const Stack = createNativeStackNavigator();
@@ -137,6 +138,7 @@ const AppNavigator = () => {
             <Stack.Screen name="Chats" component={ChatsScreen} />
             <Stack.Screen name="GroupChat" component={GroupChatScreen} />
             <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+            <Stack.Screen name="Camera" component={CameraScreen} />
           </Stack.Navigator>
         ) : (
           <AuthNavigator />
