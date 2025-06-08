@@ -9,8 +9,8 @@ const PostItem = ({ post }) => {
   const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth || {});
   const { author, content, createdAt, likes, comments, images } = post;
-  const shares = post.shares || Math.floor(Math.random() * 50);
-  const saves = post.savedBy?.length || Math.floor(Math.random() * 100);
+  const shares = post.shares || 0; // Remove random fallback
+  const saves = post.savedBy?.length || 0; // Remove random fallback
 
   // Check if the current user has liked the post
   const isLiked = Array.isArray(likes) && user?._id && likes.includes(user._id);
@@ -18,7 +18,7 @@ const PostItem = ({ post }) => {
   const [optimisticLikeCount, setOptimisticLikeCount] = useState(
     likes?.length || 0
   );
-  const [loading, setLoading] = useState(false); // Add loading state
+  const [loading, setLoading] = useState(false);
 
   const formatTimestamp = (dateString) => {
     const now = new Date();
@@ -48,9 +48,8 @@ const PostItem = ({ post }) => {
       return;
     }
 
-    if (loading) return; // Prevent multiple clicks
+    if (loading) return;
 
-    // Optimistic update
     const newLiked = !optimisticLiked;
     const newLikeCount = newLiked
       ? optimisticLikeCount + 1
@@ -62,7 +61,6 @@ const PostItem = ({ post }) => {
     try {
       await dispatch(likePost(post._id, user._id, newLiked));
     } catch (error) {
-      // Revert optimistic update on failure
       setOptimisticLiked(isLiked);
       setOptimisticLikeCount(likes?.length || 0);
       alert(error.message || "Failed to like post");
@@ -139,20 +137,24 @@ const PostItem = ({ post }) => {
         </View>
       </View>
 
-      {/* Tóm tắt nội dung và link xem bình luận */}
+      {/* Tóm tắt nội dung và bình luận */}
       <View style={styles.engagementSummary}>
-        <Text style={styles.summaryText} numberOfLines={2}>
-          <Text style={styles.summaryAuthorName}>
-            {author.name || "Unknown User"}{" "}
-          </Text>
-          {getContentSummary(content, 70)}
-        </Text>
         {comments.length > 0 && (
-          <TouchableOpacity style={styles.viewCommentsButton}>
-            <Text style={styles.viewCommentsText}>
-              View all {comments.length} comments
+          <View style={styles.commentSection}>
+            {/* Preview first comment */}
+            <Text style={styles.commentPreview} numberOfLines={1}>
+              <Text style={styles.commentAuthor}>
+                {comments[0].author?.username || "Unknown User"}{" "}
+              </Text>
+              {comments[0].content}
             </Text>
-          </TouchableOpacity>
+            {/* View all comments button */}
+            <TouchableOpacity style={styles.viewCommentsButton}>
+              <Text style={styles.viewCommentsText}>
+                View all {comments.length} comments
+              </Text>
+            </TouchableOpacity>
+          </View>
         )}
       </View>
     </View>
@@ -221,15 +223,31 @@ const styles = StyleSheet.create({
     fontSize: typography.fontSize.sm,
     color: colors.text,
     lineHeight: typography.fontSize.sm * 1.4,
-    marginBottom: spacing.xs,
+    marginBottom: spacing.sm,
   },
   summaryAuthorName: {
     fontWeight: "bold",
   },
-  viewCommentsButton: {},
+  commentSection: {
+    marginTop: spacing.xs,
+  },
+  commentPreview: {
+    fontSize: typography.fontSize.sm - 1,
+    color: colors.text,
+    lineHeight: typography.fontSize.sm * 1.3,
+    marginBottom: spacing.xs,
+  },
+  commentAuthor: {
+    fontWeight: "bold",
+    color: colors.text,
+  },
+  viewCommentsButton: {
+    paddingVertical: spacing.xs,
+  },
   viewCommentsText: {
     color: colors.textSecondary,
     fontSize: typography.fontSize.sm,
+    fontWeight: "500",
   },
 });
 

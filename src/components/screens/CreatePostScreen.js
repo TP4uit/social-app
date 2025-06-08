@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -10,53 +10,131 @@ import {
   KeyboardAvoidingView,
   Platform,
   StatusBar,
-  ScrollView
-} from 'react-native';
-import { useDispatch, useSelector } from 'react-redux';
-import { createPost as createPostAction } from '../../redux/actions/postsActions';
-import { colors, spacing, typography } from '../../theme';
-import { useAuth } from '../../hooks/useAuth';
-import Icon from 'react-native-vector-icons/Ionicons';
+  ScrollView,
+  ActivityIndicator,
+  Alert,
+} from "react-native";
+import { useDispatch, useSelector } from "react-redux";
+import { createPost as createPostAction } from "../../redux/actions/postsActions";
+import { colors, spacing, typography } from "../../theme";
+import { useAuth } from "../../hooks/useAuth";
+import { imageService } from "../../api/imageService";
+import Icon from "react-native-vector-icons/Ionicons";
+import * as ImagePicker from "expo-image-picker";
+import * as FileSystem from "expo-file-system";
 
-const DEFAULT_AVATAR = 'https://i.pravatar.cc/150?u=defaultUser';
+const DEFAULT_AVATAR = "https://i.pravatar.cc/150?u=defaultUser";
 
-const CreatePostScreen = ({ navigation, route }) => {
-  const [content, setContent] = useState('');
-  const [contentError, setContentError] = useState('');
+const CreatePostScreen = ({ navigation }) => {
+  const [content, setContent] = useState("");
+  const [contentError, setContentError] = useState("");
   const [imageUri, setImageUri] = useState(null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [isPosting, setIsPosting] = useState(false);
 
   const dispatch = useDispatch();
-  const { creating, createError } = useSelector(state => state.posts);
+  const { creating, createError } = useSelector((state) => state.posts || {});
   const { user } = useAuth();
 
   const currentUserAvatar = user?.avatar || DEFAULT_AVATAR;
 
-  useEffect(() => {
-    if (route.params?.imageUri) {
-      setImageUri(route.params.imageUri);
-      navigation.setParams({ imageUri: null });
-    }
-  }, [route.params?.imageUri, navigation]);
-
   const validateForm = () => {
-    if (!content.trim() && !imageUri) { // Cần có nội dung hoặc ảnh
-      setContentError('Please write something or add an image for your post.');
+    if (!content.trim() && !imageUri) {
+      setContentError("Please add text or an image to your post.");
       return false;
     }
-    setContentError('');
+    setContentError("");
     return true;
+  };
+
+  const handleImagePick = async () => {
+    // Request permission on mobile only
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert(
+        "Permission Denied",
+        "Please allow access to your photos to upload an image."
+      );
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1], // Match EditProfileScreen's avatar aspect ratio
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets && result.assets[0]?.uri) {
+      console.log("Selected image URI:", result.assets[0].uri); // Debug log
+      setImageUri(result.assets[0].uri); // Store URI in state, as in EditProfileScreen
+      if (contentError && (content.trim() || result.assets[0].uri)) {
+        setContentError("");
+      }
+    } else {
+      console.log("Image picker result:", result); // Debug log for failures
+    }
   };
 
   const handleCreatePost = async () => {
     if (!validateForm()) return;
 
+    setIsPosting(true);
     try {
-      await dispatch(createPostAction({ content, image: imageUri }));
-      setContent('');
+      let images = [];
+      if (imageUri) {
+        setIsUploadingImage(true);
+        try {
+          console.log("Uploading image with URI:", imageUri); // Debug log
+
+          // Validate and upload only file:// URIs, as in EditProfileScreen
+          let imageString = imageUri;
+          if (imageUri.startsWith("file://")) {
+            console.log("Validating file:// URI:", imageUri);
+            const fileInfo = await FileSystem.getInfoAsync(imageUri);
+            if (!fileInfo.exists) {
+              throw new Error("Selected image does not exist");
+            }
+            imageString = await imageService.getImageString(imageUri);
+            console.log("Cloudinary URL received:", imageString); // Debug log
+          } else {
+            console.log("Using existing URI (non-file://):", imageUri); // Debug log
+          }
+          images = [imageString];
+        } catch (error) {
+          console.error(
+            "Image upload error:",
+            error.message,
+            error.response?.data
+          );
+          setContentError(
+            "Failed to upload image: " +
+              (error.response?.data?.error || error.message)
+          );
+          setIsUploadingImage(false);
+          setIsPosting(false);
+          return;
+        }
+        setIsUploadingImage(false);
+      }
+
+      const postData = {
+        content: content.trim() || "",
+        images,
+        privacy: "public",
+      };
+
+      console.log("Posting data:", postData); // Debug log
+      await dispatch(createPostAction(postData));
+      setContent("");
       setImageUri(null);
-      navigation.navigate('Feed');
+      console.log("Navigating to Feed tab"); // Debug log
+      navigation.navigate("Main", { screen: "Feed" });
     } catch (error) {
-      console.log('Create post error:', error);
+      console.error("Create post error:", error);
+      setContentError(error.message || "Failed to create post");
+    } finally {
+      setIsPosting(false);
     }
   };
 
@@ -64,88 +142,119 @@ const CreatePostScreen = ({ navigation, route }) => {
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.white} />
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
-          <Icon name="close-outline" size={30} color={colors.text} />
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.headerButton}
+        >
+          <Icon name="close-outline" size={28} color={colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Create Post</Text>
         <TouchableOpacity
           onPress={handleCreatePost}
-          style={styles.headerButton}
-          disabled={creating || (!content.trim() && !imageUri) }
+          style={styles.postButton}
+          disabled={
+            creating ||
+            isPosting ||
+            isUploadingImage ||
+            (!content.trim() && !imageUri)
+          }
         >
-          <Text style={[
-            styles.postButtonText,
-            (!content.trim() && !imageUri || creating) && styles.postButtonTextDisabled
-          ]}>
-            Post
-          </Text>
+          {isPosting || isUploadingImage ? (
+            <ActivityIndicator size="small" color={colors.white} />
+          ) : (
+            <Text
+              style={[
+                styles.postButtonText,
+                (creating ||
+                  isPosting ||
+                  isUploadingImage ||
+                  (!content.trim() && !imageUri)) &&
+                  styles.postButtonTextDisabled,
+              ]}
+            >
+              Post
+            </Text>
+          )}
         </TouchableOpacity>
       </View>
 
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.keyboardAvoid}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : -StatusBar.currentHeight || 0}
+        keyboardVerticalOffset={
+          Platform.OS === "ios" ? 0 : -StatusBar.currentHeight || 0
+        }
       >
-        <ScrollView contentContainerStyle={styles.scrollContentContainer} keyboardShouldPersistTaps="handled">
-          <View style={styles.mainContentContainer}>
-            <View style={styles.inputArea}>
-              <Image source={{ uri: currentUserAvatar }} style={styles.avatar} />
-              <TextInput
-                placeholder="What's on your mind?"
-                placeholderTextColor={colors.textSecondary}
-                value={content}
-                onChangeText={text => {
-                  setContent(text);
-                  if (contentError && (text.trim() || imageUri)) setContentError('');
-                }}
-                multiline
-                style={styles.textInput}
-                scrollEnabled={true}
-                maxHeight={200}
+        <ScrollView
+          contentContainerStyle={styles.scrollContentContainer}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.cardContainer}>
+            <View style={styles.userInfo}>
+              <Image
+                source={{ uri: currentUserAvatar }}
+                style={styles.avatar}
               />
+              <Text style={styles.username}>
+                {user?.username || "Unknown User"}
+              </Text>
             </View>
-            {contentError ? <Text style={styles.inlineErrorText}>{contentError}</Text> : null}
-            
+            <TextInput
+              placeholder="What's on your mind?"
+              placeholderTextColor={colors.textSecondary}
+              value={content}
+              onChangeText={(text) => {
+                setContent(text);
+                if (contentError && (text.trim() || imageUri))
+                  setContentError("");
+              }}
+              multiline
+              style={styles.textStyle}
+              maxHeight={200}
+            />
             {imageUri && (
-              <View style={styles.imagePreviewContainer}>
+              <View style={styles.imageContainer}>
                 <Image source={{ uri: imageUri }} style={styles.previewImage} />
-                <TouchableOpacity onPress={() => setImageUri(null)} style={styles.removeImageButton}>
-                  <Icon name="close-circle" size={28} color={colors.error} />
+                {isUploadingImage && (
+                  <View style={styles.imageLoading}>
+                    <ActivityIndicator size="large" color={colors.white} />
+                  </View>
+                )}
+                <TouchableOpacity
+                  onPress={() => setImageUri(null)}
+                  style={styles.removeImageButton}
+                  disabled={isUploadingImage}
+                >
+                  <Icon name="close-circle" size={24} color={colors.white} />
                 </TouchableOpacity>
               </View>
             )}
-
-            {createError && (
-                <View style={styles.apiErrorContainer}>
-                    <Text style={styles.apiErrorText}>{createError}</Text>
-                </View>
+            {contentError && (
+              <Text style={styles.errorText}>{contentError}</Text>
             )}
-
-            <View style={styles.iconToolbar}>
-              <TouchableOpacity 
-                style={styles.toolbarIconWrapper}
-                onPress={() => navigation.navigate('Camera', { source: 'CreatePost' })}
+            <View style={styles.toolbar}>
+              <TouchableOpacity
+                onPress={handleImagePick}
+                style={styles.toolbarButton}
               >
-                <Icon name="camera-outline" size={26} color={colors.primary} />
+                <Icon name="images-outline" size={24} color={colors.primary} />
+                <Text style={styles.toolbarText}>Photo</Text>
               </TouchableOpacity>
-               <TouchableOpacity 
-                style={styles.toolbarIconWrapper}
-                onPress={() => navigation.navigate('Camera', { source: 'CreatePost', pickOnly: true })}
-              >
-                <Icon name="images-outline" size={26} color={colors.primary} />
+              <TouchableOpacity style={styles.toolbarButton}>
+                <Icon
+                  name="pricetag-outline"
+                  size={24}
+                  color={colors.textSecondary}
+                />
+                <Text style={styles.toolbarText}>Tag</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.toolbarIconWrapper}>
-                <Icon name="pricetag-outline" size={24} color={colors.textSecondary} />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.toolbarIconWrapper}>
-                <Icon name="location-outline" size={26} color={colors.textSecondary} />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.toolbarIconWrapper}>
-                <Icon name="happy-outline" size={26} color={colors.textSecondary} />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.toolbarIconWrapper}>
-                <Icon name="people-outline" size={26} color={colors.textSecondary} />
+              <TouchableOpacity style={styles.toolbarButton}>
+                <Icon
+                  name="location-outline"
+                  size={24}
+                  color={colors.textSecondary}
+                />
+                <Text style={styles.toolbarText}>Location</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -156,34 +265,45 @@ const CreatePostScreen = ({ navigation, route }) => {
 };
 
 const styles = StyleSheet.create({
-  safeArea: {
+  container: {
     flex: 1,
-    backgroundColor: colors.white,
+    backgroundColor: colors.background,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
+    backgroundColor: colors.white,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    height: 56,
+    borderColor: colors.borderColor,
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
   },
   headerButton: {
-    padding: spacing.xs,
-    minWidth: 50,
-    alignItems: 'center',
+    padding: spacing.sm,
   },
   headerTitle: {
     fontSize: typography.fontSize.lg,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     color: colors.text,
+  },
+  postButton: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.primary,
+    borderRadius: 20,
+    minWidth: 80,
+    alignItems: "center",
   },
   postButtonText: {
     fontSize: typography.fontSize.md,
-    color: colors.primary,
-    fontWeight: 'bold',
+    color: colors.white,
+    fontWeight: "600",
   },
   postButtonTextDisabled: {
     color: colors.textSecondary,
@@ -193,86 +313,95 @@ const styles = StyleSheet.create({
   },
   scrollContentContainer: {
     flexGrow: 1,
-  },
-  mainContentContainer: {
-    flex: 1,
     padding: spacing.md,
-    margin: spacing.md,
+  },
+  cardContainer: {
     backgroundColor: colors.white,
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
+    padding: spacing.md,
+    marginBottom: spacing.lg,
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
-  inputArea: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+  userInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: spacing.md,
   },
   avatar: {
     width: 40,
     height: 40,
     borderRadius: 20,
     marginRight: spacing.sm,
-    marginTop: spacing.xs,
   },
-  textInput: {
-    flex: 1,
+  username: {
+    fontSize: typography.fontSize.md,
+    fontWeight: "bold",
+    color: colors.text,
+  },
+  textStyle: {
     fontSize: typography.fontSize.md,
     color: colors.text,
-    textAlignVertical: 'top',
-    paddingTop: Platform.OS === 'ios' ? spacing.sm : spacing.xs,
-    paddingBottom: spacing.sm,
+    textAlignVertical: "top",
+    padding: spacing.sm,
+    backgroundColor: colors.background,
+    borderRadius: 8,
+    marginBottom: spacing.sm,
     lineHeight: typography.fontSize.md * 1.5,
   },
-  inlineErrorText: {
+  errorText: {
     color: colors.error,
     fontSize: typography.fontSize.sm,
-    marginTop: spacing.xs,
-    marginLeft: 50, 
+    marginBottom: spacing.sm,
   },
-  apiErrorContainer: {
-    backgroundColor: '#FEEEF0',
-    borderRadius: 8,
-    padding: spacing.sm,
-    marginTop: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.error,
-  },
-  apiErrorText: {
-    color: colors.error,
-    fontSize: typography.fontSize.sm,
-  },
-  iconToolbar: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    paddingTop: spacing.md,
-    marginTop: 'auto',
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    paddingHorizontal: spacing.sm,
-  },
-  toolbarIconWrapper: {
-    padding: spacing.sm,
-  },
-  imagePreviewContainer: {
-    marginTop: spacing.md,
+  imageContainer: {
+    position: "relative",
     marginBottom: spacing.md,
-    alignItems: 'center',
-    position: 'relative',
+    borderRadius: 8,
+    overflow: "hidden",
   },
   previewImage: {
-    width: '100%',
-    aspectRatio: 1, // Hoặc một tỷ lệ khác bạn muốn
-    borderRadius: 8,
-    resizeMode: 'cover',
+    width: "100%",
+    aspectRatio: 1,
+    resizeMode: "cover",
+  },
+  imageLoading: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
   },
   removeImageButton: {
-    position: 'absolute',
+    position: "absolute",
     top: spacing.xs,
     right: spacing.xs,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    borderRadius: 14,
-    padding: 3,
+    backgroundColor: "rgba(0,0,0,0.7)",
+    borderRadius: 12,
+    padding: spacing.xs,
+  },
+  toolbar: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderColor: colors.borderColor,
+  },
+  toolbarButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: spacing.sm,
+  },
+  toolbarText: {
+    fontSize: typography.fontSize.sm,
+    color: colors.textSecondary,
+    marginLeft: spacing.xs,
   },
 });
 

@@ -102,10 +102,15 @@ const FeedScreen = ({ navigation }) => {
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
+    console.log("FeedScreen mounted, displayedPosts:", displayedPosts); // Debug log
     if (displayedPosts.length === 0) {
       dispatch(fetchPosts());
     }
   }, [dispatch]);
+
+  useEffect(() => {
+    console.log("displayedPosts updated:", displayedPosts); // Debug log
+  }, [displayedPosts]);
 
   const handleLoadMore = () => {
     if (!loading && !refreshing && displayedCount < allPosts.length) {
@@ -117,6 +122,11 @@ const FeedScreen = ({ navigation }) => {
     setRefreshing(true);
     dispatch(fetchPosts()).finally(() => setRefreshing(false));
   };
+
+  // Filter valid posts
+  const validPosts = displayedPosts.filter(
+    (post) => post && post._id && post.author
+  );
 
   const ListHeaderComponent = () => (
     <View style={styles.storiesOuterContainer}>
@@ -133,13 +143,14 @@ const FeedScreen = ({ navigation }) => {
 
   const renderItem = ({ item }) => {
     if (!item || !item.author) {
+      console.warn("Invalid post item:", item); // Debug log
       return null;
     }
     return <PostItem post={item} />;
   };
 
   const renderFooter = () => {
-    if (!loading || refreshing || displayedPosts.length === 0) return null;
+    if (!loading || refreshing || validPosts.length === 0) return null;
     return (
       <View style={styles.footerLoader}>
         <ActivityIndicator size="small" color={colors.primary} />
@@ -148,14 +159,14 @@ const FeedScreen = ({ navigation }) => {
   };
 
   const renderEmptyComponent = () => {
-    if (loading && !refreshing && displayedPosts.length === 0) {
+    if (loading && !refreshing && validPosts.length === 0) {
       return (
         <View style={styles.emptyContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
       );
     }
-    if (error && !loading && displayedPosts.length === 0) {
+    if (error && !loading && validPosts.length === 0) {
       return (
         <View style={styles.emptyContainer}>
           <Text style={styles.errorText}>
@@ -167,7 +178,7 @@ const FeedScreen = ({ navigation }) => {
         </View>
       );
     }
-    if (!loading && displayedPosts.length === 0 && !error) {
+    if (!loading && validPosts.length === 0 && !error) {
       return (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>No posts yet</Text>
@@ -203,9 +214,11 @@ const FeedScreen = ({ navigation }) => {
         </TouchableOpacity>
       </View>
       <FlatList
-        data={displayedPosts}
+        data={validPosts}
         renderItem={renderItem}
-        keyExtractor={(item) => item._id}
+        keyExtractor={(item) =>
+          item?._id?.toString() || Math.random().toString()
+        }
         ListHeaderComponent={ListHeaderComponent}
         ListFooterComponent={renderFooter}
         ListEmptyComponent={renderEmptyComponent}
