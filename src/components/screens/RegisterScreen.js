@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -8,34 +8,34 @@ import {
   ScrollView,
   TouchableOpacity,
   StatusBar,
-} from 'react-native';
-import { colors, spacing, typography } from '../../theme';
-import Input from '../common/Input';
-import Button from '../common/Button';
+} from "react-native";
+import { colors, spacing, typography } from "../../theme";
+import Input from "../common/Input";
+import Button from "../common/Button";
 
 const RegisterScreen = ({ navigation }) => {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
 
   const validateForm = () => {
     const newErrors = {};
-    if (!name.trim()) newErrors.name = 'Full Name is required';
+    if (!name.trim()) newErrors.name = "Full Name is required";
     if (!email.trim()) {
-      newErrors.email = 'Email is required';
+      newErrors.email = "Email is required";
     } else if (!/\S+@\S+\.\S+/.test(email)) {
-      newErrors.email = 'Email is invalid';
+      newErrors.email = "Email is invalid";
     }
     if (!password) {
-      newErrors.password = 'Password is required';
+      newErrors.password = "Password is required";
     } else if (password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
+      newErrors.password = "Password must be at least 6 characters";
     }
     if (password !== confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match';
+      newErrors.confirmPassword = "Passwords do not match";
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -46,9 +46,10 @@ const RegisterScreen = ({ navigation }) => {
     setLoading(true);
     // TODO: Implement registration logic
     // This would typically use a Redux action or a hook like useAuth
-    console.log('Registering with:', { name, email, password });
+    console.log("Registering with:", { name, email, password });
     // Giả lập gọi API
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    const res = await authService.register(name, email, password);
+    console.log("response from register", res);
     setLoading(false);
     // Nếu thành công, có thể điều hướng đến Login hoặc Feed
     // navigation.navigate('LoginForm');
@@ -60,27 +61,28 @@ const RegisterScreen = ({ navigation }) => {
       <View style={styles.headerContainer}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
-          style={styles.backButton}>
-          <Text style={styles.backButtonText}>‹</Text> 
+          style={styles.backButton}
+        >
+          <Text style={styles.backButtonText}>‹</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Sign Up</Text>
-        <View style={{ width: 40 }} /> 
+        <View style={{ width: 40 }} />
       </View>
 
       <KeyboardAvoidingView
         style={styles.keyboardAvoid}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0} 
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
       >
         <ScrollView
           contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled">
-          
+          keyboardShouldPersistTaps="handled"
+        >
           <Input
             // label="Full Name" // Thiết kế không có label riêng biệt bên trên
             value={name}
             onChangeText={setName}
-            placeholder="Full Name"
+            placeholder="Username"
             error={errors.name}
             autoCapitalize="words"
             inputStyle={styles.inputStyle}
@@ -133,7 +135,7 @@ const RegisterScreen = ({ navigation }) => {
 
       <View style={styles.footer}>
         <Text style={styles.loginText}>Already have an account? </Text>
-        <TouchableOpacity onPress={() => navigation.navigate('LoginForm')}>
+        <TouchableOpacity onPress={() => navigation.navigate("LoginForm")}>
           <Text style={styles.loginLink}>Log In</Text>
         </TouchableOpacity>
       </View>
@@ -142,7 +144,8 @@ const RegisterScreen = ({ navigation }) => {
 };
 
 // Thêm SafeAreaView vào đây nếu chưa có
-import { SafeAreaView } from 'react-native-safe-area-context'; 
+import { SafeAreaView } from "react-native-safe-area-context";
+import { authService } from "../../api/auth";
 
 const styles = StyleSheet.create({
   safeArea: {
@@ -150,11 +153,14 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
   },
   headerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between', // Để title ở giữa và có không gian cho nút back
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between", // Để title ở giữa và có không gian cho nút back
     paddingHorizontal: spacing.md,
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight + spacing.sm : spacing.md,
+    paddingTop:
+      Platform.OS === "android"
+        ? StatusBar.currentHeight + spacing.sm
+        : spacing.md,
     paddingBottom: spacing.sm,
     backgroundColor: colors.white, // Nền header
     // borderBottomWidth: 1, // Nếu muốn có đường kẻ
@@ -163,7 +169,7 @@ const styles = StyleSheet.create({
   backButton: {
     padding: spacing.sm,
     width: 40, // Đảm bảo nút back có không gian đủ
-    alignItems: 'flex-start',
+    alignItems: "flex-start",
   },
   backButtonText: {
     fontSize: typography.fontSize.xxl, // Kích thước cho icon mũi tên
@@ -171,7 +177,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: typography.fontSize.lg + 2, // Kích thước title
-    fontWeight: 'bold',
+    fontWeight: "bold",
     color: colors.text,
   },
   keyboardAvoid: {
@@ -198,20 +204,20 @@ const styles = StyleSheet.create({
   },
   registerButton: {
     marginTop: spacing.lg,
-    backgroundColor: '#E5EAF0', // Màu nền xanh/xám rất nhạt cho nút Sign Up
+    backgroundColor: "#E5EAF0", // Màu nền xanh/xám rất nhạt cho nút Sign Up
     paddingVertical: spacing.md + 2,
-    width: '100%',
+    width: "100%",
     borderRadius: 8,
   },
   registerButtonText: {
     color: colors.black, // Chữ màu đen/xám đậm
     fontSize: typography.fontSize.md,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   footer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
     paddingVertical: spacing.lg,
     borderTopWidth: 1,
     borderTopColor: colors.border,
@@ -224,7 +230,7 @@ const styles = StyleSheet.create({
   loginLink: {
     color: colors.primary,
     fontSize: typography.fontSize.sm,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
 });
 

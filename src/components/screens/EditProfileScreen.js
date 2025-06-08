@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -11,101 +11,150 @@ import {
   StatusBar,
   Platform,
   Alert,
-} from 'react-native';
-import Icon from 'react-native-vector-icons/Ionicons';
-import { colors, spacing, typography } from '../../theme';
-import { useAuth } from '../../hooks/useAuth';
-import { dummyUsers } from '../../utils/dummyData'; // Giữ lại để cập nhật mock
+} from "react-native";
+import Icon from "react-native-vector-icons/Ionicons";
+import * as ImagePicker from "expo-image-picker";
+import * as FileSystem from "expo-file-system";
+import DatePicker from "react-native-date-picker"; // Import date picker
+import { colors, spacing, typography } from "../../theme";
+import { useAuth } from "../../hooks/useAuth";
+import { dummyUsers } from "../../utils/dummyData";
+import { profileService } from "../../api/profile";
+import { imageService } from "../../api/imageService";
 
-const DEFAULT_AVATAR = 'https://i.pravatar.cc/150?u=defaultUser';
+const DEFAULT_AVATAR = "https://i.pravatar.cc/150?u=defaultUser";
+const DEFAULT_COVER_PHOTO = "https://via.placeholder.com/150";
 
-const EditProfileScreen = ({ navigation, route }) => {
+const EditProfileScreen = ({ navigation }) => {
   const { user: currentUser, loading: authLoading } = useAuth();
   const [profileData, setProfileData] = useState({
-    name: '',
-    username: '',
-    bio: '',
-    website: '',
-    pronouns: '',
+    username: "",
     avatar: DEFAULT_AVATAR,
-    email: '',
-    phone: '',
+    coverPhoto: DEFAULT_COVER_PHOTO,
+    bio: "",
+    phone: "",
+    dateOfBirth: "",
+    gender: "",
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [openDatePicker, setOpenDatePicker] = useState(false); // State for date picker modal
 
   useEffect(() => {
     if (currentUser) {
       setProfileData({
-        name: currentUser.name || '',
-        username: currentUser.username || currentUser.email?.split('@')[0] || '',
-        bio: currentUser.bio || '',
-        website: currentUser.website || '',
-        pronouns: currentUser.pronouns || '',
+        username: currentUser.username || "",
         avatar: currentUser.avatar || DEFAULT_AVATAR,
-        email: currentUser.email || '',
-        phone: currentUser.phone || 'N/A',
+        coverPhoto: currentUser.coverPhoto || DEFAULT_COVER_PHOTO,
+        bio: currentUser.bio || "",
+        phone: currentUser.phone || "",
+        dateOfBirth: currentUser.dateOfBirth || "",
+        gender: currentUser.gender || "",
       });
     }
   }, [currentUser]);
 
-  useEffect(() => {
-    if (route.params?.imageUri) {
-      setProfileData(prev => ({ ...prev, avatar: route.params.imageUri }));
-      navigation.setParams({ imageUri: null });
-    }
-  }, [route.params?.imageUri, navigation]);
-
   const handleInputChange = (field, value) => {
-    setProfileData(prev => ({ ...prev, [field]: value }));
+    setProfileData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleSave = () => {
-    setIsLoading(true);
-    console.log('Saving profile data:', profileData);
-
-    if (currentUser) {
-      const userIndex = dummyUsers.findIndex(u => u.id === currentUser.id);
-      if (userIndex !== -1) {
-        dummyUsers[userIndex] = {
-          ...dummyUsers[userIndex],
-          name: profileData.name,
-          bio: profileData.bio,
-          avatar: profileData.avatar,
-          website: profileData.website,
-          pronouns: profileData.pronouns,
-          // Không cập nhật username từ đây nếu nó là email
-        };
-        console.log('Dummy user updated:', dummyUsers[userIndex]);
-      }
+  const handlePickImage = async (field) => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert(
+        "Permission Denied",
+        "Please allow access to your photos to upload an image."
+      );
+      return;
     }
 
-    setTimeout(() => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: field === "avatar" ? [1, 1] : [16, 9],
+      quality: 0.8,
+    });
+
+    if (!result.canceled) {
+      const imageUri = result.assets[0].uri;
+      console.log(`Selected ${field} URI:`, imageUri);
+      setProfileData((prev) => ({ ...prev, [field]: imageUri }));
+    }
+  };
+
+  const handleSave = async () => {
+    setIsLoading(true);
+    try {
+      console.log("Saving profile with data:", profileData);
+
+      let avatarString = profileData.avatar;
+      if (profileData.avatar.startsWith("file://")) {
+        const fileInfo = await FileSystem.getInfoAsync(profileData.avatar);
+        if (!fileInfo.exists) {
+          throw new Error("Selected avatar image does not exist");
+        }
+        avatarString = await imageService.getImageString(profileData.avatar);
+      }
+
+      let coverPhotoString = profileData.coverPhoto;
+      if (profileData.coverPhoto.startsWith("file://")) {
+        const fileInfo = await FileSystem.getInfoAsync(profileData.coverPhoto);
+        if (!fileInfo.exists) {
+          throw new Error("Selected cover photo does not exist");
+        }
+        coverPhotoString = await imageService.getImageString(
+          profileData.coverPhoto
+        );
+      }
+
+      await profileService.updateUserInfo({
+        username: profileData.username,
+        avatar: avatarString,
+        coverPhoto: coverPhotoString,
+        bio: profileData.bio,
+        phone: profileData.phone,
+        dateOfBirth: profileData.dateOfBirth,
+        gender: profileData.gender,
+      });
+
+      if (currentUser) {
+        const userIndex = dummyUsers.findIndex((u) => u.id === currentUser.id);
+        if (userIndex !== -1) {
+          dummyUsers[userIndex] = {
+            ...dummyUsers[userIndex],
+            username: profileData.username,
+            avatar: avatarString,
+            coverPhoto: coverPhotoString,
+            bio: profileData.bio,
+            phone: profileData.phone,
+            dateOfBirth: profileData.dateOfBirth,
+            gender: profileData.gender,
+          };
+          console.log("Dummy user updated:", dummyUsers[userIndex]);
+        }
+      }
+
       setIsLoading(false);
-      Alert.alert('Profile Saved', 'Your profile has been updated (mock).', [
-        { text: 'OK', onPress: () => navigation.goBack() },
+      Alert.alert("Success", "Your profile has been updated.", [
+        { text: "OK", onPress: () => navigation.goBack() },
       ]);
-    }, 1000);
+    } catch (error) {
+      setIsLoading(false);
+      console.error("Save profile error:", error.message, error.response?.data);
+      Alert.alert(
+        "Error",
+        error.message || "Failed to save profile. Please try again."
+      );
+    }
   };
-
-  const handleEditProfilePhoto = () => {
-    navigation.navigate('Camera', { source: 'EditProfile' });
-  };
-
-  if (authLoading && !currentUser) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.loadingContainer}>
-          <Text>Loading profile...</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.white} />
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.headerButton}
+        >
           <Icon name="close-outline" size={30} color={colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Edit Profile</Text>
@@ -114,8 +163,13 @@ const EditProfileScreen = ({ navigation, route }) => {
           style={styles.headerButton}
           disabled={isLoading}
         >
-          <Text style={[styles.saveButtonText, isLoading && styles.saveButtonTextDisabled]}>
-            {isLoading ? 'Saving...' : 'Save'}
+          <Text
+            style={[
+              styles.saveButtonText,
+              isLoading && styles.saveButtonTextDisabled,
+            ]}
+          >
+            {isLoading ? "Saving..." : "Save"}
           </Text>
         </TouchableOpacity>
       </View>
@@ -127,21 +181,30 @@ const EditProfileScreen = ({ navigation, route }) => {
       >
         <Text style={styles.sectionTitle}>Profile Photo</Text>
         <View style={styles.profilePhotoContainer}>
-          <Image source={{ uri: profileData.avatar }} style={styles.profileImage} />
-          <TouchableOpacity style={styles.editPhotoButton} onPress={handleEditProfilePhoto}>
-            <Text style={styles.editPhotoButtonText}>Edit Profile Photo</Text>
+          <Image
+            source={{ uri: profileData.avatar }}
+            style={styles.profileImage}
+          />
+          <TouchableOpacity
+            style={styles.editPhotoButton}
+            onPress={() => handlePickImage("avatar")}
+          >
+            <Text style={styles.editPhotoButtonText}>Change Profile Photo</Text>
           </TouchableOpacity>
         </View>
 
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Full Name</Text>
-          <TextInput
-            style={styles.input}
-            value={profileData.name}
-            onChangeText={text => handleInputChange('name', text)}
-            placeholder="Enter your full name"
-            placeholderTextColor={colors.textSecondary}
+        <Text style={styles.sectionTitle}>Cover Photo</Text>
+        <View style={styles.profilePhotoContainer}>
+          <Image
+            source={{ uri: profileData.coverPhoto }}
+            style={styles.coverPhoto}
           />
+          <TouchableOpacity
+            style={styles.editPhotoButton}
+            onPress={() => handlePickImage("coverPhoto")}
+          >
+            <Text style={styles.editPhotoButtonText}>Change Cover Photo</Text>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.inputGroup}>
@@ -149,7 +212,7 @@ const EditProfileScreen = ({ navigation, route }) => {
           <TextInput
             style={styles.input}
             value={profileData.username}
-            onChangeText={text => handleInputChange('username', text)}
+            onChangeText={(text) => handleInputChange("username", text)}
             placeholder="Enter your username"
             placeholderTextColor={colors.textSecondary}
             autoCapitalize="none"
@@ -161,7 +224,7 @@ const EditProfileScreen = ({ navigation, route }) => {
           <TextInput
             style={[styles.input, styles.bioInput]}
             value={profileData.bio}
-            onChangeText={text => handleInputChange('bio', text)}
+            onChangeText={(text) => handleInputChange("bio", text)}
             placeholder="Tell us about yourself"
             placeholderTextColor={colors.textSecondary}
             multiline
@@ -170,46 +233,58 @@ const EditProfileScreen = ({ navigation, route }) => {
         </View>
 
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>Website</Text>
+          <Text style={styles.label}>Phone Number</Text>
           <TextInput
             style={styles.input}
-            value={profileData.website}
-            onChangeText={text => handleInputChange('website', text)}
-            placeholder="yourwebsite.com"
+            value={profileData.phone}
+            onChangeText={(text) => handleInputChange("phone", text)}
+            placeholder="Enter your phone number"
             placeholderTextColor={colors.textSecondary}
-            keyboardType="url"
-            autoCapitalize="none"
+            keyboardType="phone-pad"
           />
         </View>
 
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>Pronouns</Text>
-          <TextInput
+          <Text style={styles.label}>Date of Birth</Text>
+          <TouchableOpacity
             style={styles.input}
-            value={profileData.pronouns}
-            onChangeText={text => handleInputChange('pronouns', text)}
-            placeholder="e.g., she/her, he/him, they/them"
-            placeholderTextColor={colors.textSecondary}
+            onPress={() => setOpenDatePicker(true)}
+          >
+            <Text style={styles.inputText}>
+              {profileData.dateOfBirth || "Select date (YYYY-MM-DD)"}
+            </Text>
+          </TouchableOpacity>
+          <DatePicker
+            modal
+            open={openDatePicker}
+            date={
+              profileData.dateOfBirth
+                ? new Date(profileData.dateOfBirth)
+                : new Date()
+            }
+            onConfirm={(date) => {
+              setOpenDatePicker(false);
+              handleInputChange(
+                "dateOfBirth",
+                date.toISOString().split("T")[0]
+              );
+            }}
+            onCancel={() => setOpenDatePicker(false)}
+            mode="date"
+            maximumDate={new Date()} // Prevent future dates
           />
         </View>
 
-        <Text style={styles.sectionTitleSeparator}>Private Information</Text>
-        <View style={styles.privateInfoItem}>
-          <Text style={styles.privateInfoLabel}>Email</Text>
-          <TouchableOpacity onPress={() => Alert.alert('Change Email', 'Functionality to change email is not implemented here.')}>
-            <Text style={styles.privateInfoValueAction}>
-              {profileData.email || 'N/A'} <Text style={styles.tapToChange}>Tap to change</Text>
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.privateInfoItem}>
-          <Text style={styles.privateInfoLabel}>Phone</Text>
-          <TouchableOpacity onPress={() => Alert.alert('Change Phone', 'Functionality to change phone number is not implemented here.')}>
-            <Text style={styles.privateInfoValueAction}>
-              {profileData.phone || 'N/A'} <Text style={styles.tapToChange}>Tap to change</Text>
-            </Text>
-          </TouchableOpacity>
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Gender</Text>
+          <TextInput
+            style={styles.input}
+            value={profileData.gender}
+            onChangeText={(text) => handleInputChange("gender", text)}
+            placeholder="e.g., male, female, other"
+            placeholderTextColor={colors.textSecondary}
+            autoCapitalize="words"
+          />
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -223,13 +298,13 @@ const styles = StyleSheet.create({
   },
   loadingContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderBottomWidth: 1,
@@ -239,17 +314,17 @@ const styles = StyleSheet.create({
   headerButton: {
     padding: spacing.xs,
     minWidth: 50,
-    alignItems: 'center',
+    alignItems: "center",
   },
   headerTitle: {
     fontSize: typography.fontSize.lg,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     color: colors.text,
   },
   saveButtonText: {
     fontSize: typography.fontSize.md,
     color: colors.primary,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   saveButtonTextDisabled: {
     color: colors.textSecondary,
@@ -261,15 +336,15 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xxl,
   },
   sectionTitle: {
-    fontSize: typography.fontSize.lg -1,
-    fontWeight: 'bold',
+    fontSize: typography.fontSize.lg - 1,
+    fontWeight: "bold",
     color: colors.text,
     marginTop: spacing.lg,
     marginBottom: spacing.sm,
     paddingHorizontal: spacing.lg,
   },
   profilePhotoContainer: {
-    alignItems: 'center',
+    alignItems: "center",
     marginVertical: spacing.md,
   },
   profileImage: {
@@ -277,18 +352,25 @@ const styles = StyleSheet.create({
     height: 120,
     borderRadius: 60,
     marginBottom: spacing.md,
-    backgroundColor: colors.border, 
+    backgroundColor: colors.border,
+  },
+  coverPhoto: {
+    width: "100%",
+    height: 150,
+    borderRadius: 8,
+    marginBottom: spacing.md,
+    backgroundColor: colors.border,
   },
   editPhotoButton: {
-    backgroundColor: colors.background, 
+    backgroundColor: colors.background,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.lg,
     borderRadius: 8,
   },
   editPhotoButtonText: {
-    color: colors.primary, 
+    color: colors.primary,
     fontSize: typography.fontSize.sm,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   inputGroup: {
     paddingHorizontal: spacing.lg,
@@ -300,52 +382,25 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   input: {
-    backgroundColor: colors.background, 
+    backgroundColor: colors.background,
     borderRadius: 8,
     paddingHorizontal: spacing.md,
-    paddingVertical: Platform.OS === 'ios' ? spacing.md -2 : spacing.sm -2 , 
+    paddingVertical: Platform.OS === "ios" ? spacing.md - 2 : spacing.sm - 2,
     fontSize: typography.fontSize.md,
     color: colors.text,
     borderWidth: 1,
-    borderColor: colors.border, 
-    height: 50, 
+    borderColor: colors.border,
+    height: 50,
+    justifyContent: "center", // For TouchableOpacity
+  },
+  inputText: {
+    fontSize: typography.fontSize.md,
+    color: colors.text,
   },
   bioInput: {
-    height: 100, 
-    textAlignVertical: 'top', 
-    paddingTop: spacing.sm, 
-  },
-  sectionTitleSeparator: {
-    fontSize: typography.fontSize.lg,
-    fontWeight: 'bold',
-    color: colors.text,
-    paddingHorizontal: spacing.lg,
-    marginTop: spacing.xl,
-    marginBottom: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    paddingTop: spacing.lg,
-  },
-  privateInfoItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  privateInfoLabel: {
-    fontSize: typography.fontSize.md,
-    color: colors.text,
-  },
-  privateInfoValueAction: {
-    fontSize: typography.fontSize.md,
-    color: colors.text,
-  },
-  tapToChange: {
-    color: colors.primary,
-    marginLeft: spacing.xs,
+    height: 100,
+    textAlignVertical: "top",
+    paddingTop: spacing.sm,
   },
 });
 

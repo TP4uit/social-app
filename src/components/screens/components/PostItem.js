@@ -1,13 +1,24 @@
-import React from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
-import { colors, spacing, typography } from '../../../theme';
-import Icon from 'react-native-vector-icons/Ionicons'; // Sử dụng Ionicons, bạn có thể chọn bộ khác
+import React, { useState } from "react";
+import { View, Text, StyleSheet, Image, TouchableOpacity } from "react-native";
+import { useDispatch, useSelector } from "react-redux";
+import { colors, spacing, typography } from "../../../theme";
+import Icon from "react-native-vector-icons/Ionicons";
+import { likePost } from "../../../redux/actions/postsActions";
 
 const PostItem = ({ post }) => {
-  const { author, content, createdAt, likes, comments, image } = post;
-  // Giả lập số liệu cho shares và saves, vì dummyData chưa có
+  const dispatch = useDispatch();
+  const { user } = useSelector((state) => state.auth || {});
+  const { author, content, createdAt, likes, comments, images } = post;
   const shares = post.shares || Math.floor(Math.random() * 50);
-  const saves = post.saves || Math.floor(Math.random() * 100);
+  const saves = post.savedBy?.length || Math.floor(Math.random() * 100);
+
+  // Check if the current user has liked the post
+  const isLiked = Array.isArray(likes) && user?._id && likes.includes(user._id);
+  const [optimisticLiked, setOptimisticLiked] = useState(isLiked);
+  const [optimisticLikeCount, setOptimisticLikeCount] = useState(
+    likes?.length || 0
+  );
+  const [loading, setLoading] = useState(false); // Add loading state
 
   const formatTimestamp = (dateString) => {
     const now = new Date();
@@ -18,56 +29,111 @@ const PostItem = ({ post }) => {
     const diffHour = Math.floor(diffMin / 60);
     const diffDay = Math.floor(diffHour / 24);
 
-    if (diffSec < 60) return 'just now';
+    if (diffSec < 60) return "just now";
     if (diffMin < 60) return `${diffMin}m ago`;
-    if (diffHour < 24) return `${diffHour} ${diffHour > 1 ? 'hours' : 'hour'} ago`;
-    if (diffDay < 7) return `${diffDay} ${diffDay > 1 ? 'days' : 'day'} ago`;
+    if (diffHour < 24)
+      return `${diffHour} ${diffHour > 1 ? "hours" : "hour"} ago`;
+    if (diffDay < 7) return `${diffDay} ${diffDay > 1 ? "days" : "day"} ago`;
     return `${Math.floor(diffDay / 7)}w ago`;
   };
 
-  // Lấy phần đầu của content cho dòng tóm tắt
   const getContentSummary = (text, maxLength = 50) => {
     if (text.length <= maxLength) return text;
-    return text.substr(0, text.lastIndexOf(' ', maxLength)) + '...';
+    return text.substr(0, text.lastIndexOf(" ", maxLength)) + "...";
+  };
+
+  const handleLike = async () => {
+    if (!user?._id) {
+      alert("Please log in to like posts");
+      return;
+    }
+
+    if (loading) return; // Prevent multiple clicks
+
+    // Optimistic update
+    const newLiked = !optimisticLiked;
+    const newLikeCount = newLiked
+      ? optimisticLikeCount + 1
+      : optimisticLikeCount - 1;
+    setOptimisticLiked(newLiked);
+    setOptimisticLikeCount(newLikeCount);
+    setLoading(true);
+
+    try {
+      await dispatch(likePost(post._id, user._id, newLiked));
+    } catch (error) {
+      // Revert optimistic update on failure
+      setOptimisticLiked(isLiked);
+      setOptimisticLikeCount(likes?.length || 0);
+      alert(error.message || "Failed to like post");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <View style={styles.container}>
       {/* Thông tin người đăng và nội dung */}
       <View style={styles.contentHeader}>
-        <Text style={styles.authorName}>{author.name || 'Username'}</Text>
+        <Text style={styles.authorName}>
+          {author.username || "Unknown User"}
+        </Text>
         <Text style={styles.captionText}>{content}</Text>
         <Text style={styles.timestamp}>{formatTimestamp(createdAt)}</Text>
       </View>
 
       {/* Hình ảnh bài đăng */}
-      {image && (
-        <Image source={{ uri: image }} style={styles.postImage} resizeMode="cover" />
+      {Array.isArray(images) && images.length > 0 && images[0] !== "string" && (
+        <Image
+          source={{ uri: images[0] }}
+          style={styles.postImage}
+          resizeMode="cover"
+        />
       )}
 
       {/* Thanh hành động (Likes, Comments, Shares, Saves) */}
       <View style={styles.actionBar}>
         <View style={styles.actionGroup}>
-          <TouchableOpacity style={styles.actionButton}>
-            <Icon name="heart-outline" size={26} color={colors.textSecondary} />
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={handleLike}
+            disabled={loading}
+          >
+            <Icon
+              name={optimisticLiked ? "heart" : "heart-outline"}
+              size={26}
+              color={optimisticLiked ? colors.error : colors.textSecondary}
+            />
           </TouchableOpacity>
-          <Text style={styles.actionCount}>{likes}</Text>
+          <Text style={styles.actionCount}>{optimisticLikeCount}</Text>
         </View>
         <View style={styles.actionGroup}>
           <TouchableOpacity style={styles.actionButton}>
-            <Icon name="chatbubble-outline" size={24} color={colors.textSecondary} />
+            <Icon
+              name="chatbubble-outline"
+              size={24}
+              color={colors.textSecondary}
+            />
           </TouchableOpacity>
           <Text style={styles.actionCount}>{comments.length}</Text>
         </View>
         <View style={styles.actionGroup}>
           <TouchableOpacity style={styles.actionButton}>
-            <Icon name="paper-plane-outline" size={24} color={colors.textSecondary} />
+            <Icon
+              name="paper-plane-outline"
+              size={24}
+              color={colors.textSecondary}
+            />
           </TouchableOpacity>
           <Text style={styles.actionCount}>{shares}</Text>
         </View>
         <View style={[styles.actionGroup, styles.saveAction]}>
           <TouchableOpacity style={styles.actionButton}>
-            <Icon name="bookmark-outline" size={24} color={colors.textSecondary} />
+            <Icon
+              name="bookmark-outline"
+              size={24}
+              color={colors.textSecondary}
+            />
           </TouchableOpacity>
           <Text style={styles.actionCount}>{saves}</Text>
         </View>
@@ -76,9 +142,10 @@ const PostItem = ({ post }) => {
       {/* Tóm tắt nội dung và link xem bình luận */}
       <View style={styles.engagementSummary}>
         <Text style={styles.summaryText} numberOfLines={2}>
-          <Text style={styles.summaryAuthorName}>{author.name} </Text>
-          {/* Sử dụng lại content hoặc một phần content tóm tắt */}
-          {getContentSummary(content, 70)} 
+          <Text style={styles.summaryAuthorName}>
+            {author.name || "Unknown User"}{" "}
+          </Text>
+          {getContentSummary(content, 70)}
         </Text>
         {comments.length > 0 && (
           <TouchableOpacity style={styles.viewCommentsButton}>
@@ -95,11 +162,7 @@ const PostItem = ({ post }) => {
 const styles = StyleSheet.create({
   container: {
     backgroundColor: colors.white,
-    marginBottom: spacing.sm, // Khoảng cách giữa các bài đăng
-    // Có thể thêm border hoặc shadow nhẹ nếu muốn tách biệt card rõ hơn
-    // borderWidth: 1,
-    // borderColor: colors.border,
-    // borderRadius: 8, // Nếu muốn bo góc card
+    marginBottom: spacing.sm,
   },
   contentHeader: {
     paddingHorizontal: spacing.md,
@@ -108,12 +171,12 @@ const styles = StyleSheet.create({
   },
   authorName: {
     fontSize: typography.fontSize.lg,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     color: colors.text,
     marginBottom: spacing.xs,
   },
   captionText: {
-    fontSize: typography.fontSize.md - 1, // Cỡ chữ cho caption
+    fontSize: typography.fontSize.md - 1,
     color: colors.text,
     lineHeight: typography.fontSize.md * 1.4,
     marginBottom: spacing.xs,
@@ -124,37 +187,32 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   postImage: {
-    width: '100%',
-    // height: undefined, // Để tự tính theo aspectRatio
-    aspectRatio: 1, // Giả sử ảnh vuông, có thể thay đổi
-    // marginBottom: spacing.sm,
+    width: "100%",
+    aspectRatio: 1,
   },
   actionBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-around', // Phân bố đều các cụm action
-    alignItems: 'center',
-    paddingHorizontal: spacing.sm, // Giảm padding ngang một chút
+    flexDirection: "row",
+    justifyContent: "space-around",
+    alignItems: "center",
+    paddingHorizontal: spacing.sm,
     paddingVertical: spacing.md,
-    borderTopWidth: 1, // Đường kẻ mỏng phía trên action bar
-    borderBottomWidth: 1, // Đường kẻ mỏng phía dưới action bar
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
     borderColor: colors.border,
   },
   actionGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   actionButton: {
-    padding: spacing.xs, // Vùng nhấn cho icon
+    padding: spacing.xs,
   },
   actionCount: {
-    fontSize: typography.fontSize.sm -1,
+    fontSize: typography.fontSize.sm - 1,
     color: colors.textSecondary,
-    marginLeft: spacing.xs / 2, // Khoảng cách giữa icon và số
+    marginLeft: spacing.xs / 2,
   },
-  saveAction: {
-    // Nếu cần style riêng cho nút save (ví dụ: đẩy sang phải)
-    // marginLeft: 'auto', // Đẩy cụm này sang phải nếu các cụm khác không fill hết
-  },
+  saveAction: {},
   engagementSummary: {
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
@@ -166,11 +224,9 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   summaryAuthorName: {
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
-  viewCommentsButton: {
-    // Style cho nút xem comment
-  },
+  viewCommentsButton: {},
   viewCommentsText: {
     color: colors.textSecondary,
     fontSize: typography.fontSize.sm,

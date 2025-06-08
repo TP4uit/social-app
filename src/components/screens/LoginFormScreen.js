@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -8,65 +8,70 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-} from 'react-native';
-import { colors, spacing, typography } from '../../theme';
-import { useAuth } from '../../hooks/useAuth';
-import Input from '../common/Input'; // Sử dụng Input component
-import Button from '../common/Button'; // Sử dụng Button component
+} from "react-native";
+import { colors, spacing, typography } from "../../theme";
+import { useAuth } from "../../hooks/useAuth";
+import Input from "../common/Input"; // Sử dụng Input component
+import Button from "../common/Button"; // Sử dụng Button component
 
 const LoginFormScreen = ({ navigation }) => {
-  const [identifier, setIdentifier] = useState(''); // Username, email, or phone
-  const [password, setPassword] = useState('');
+  const [identifier, setIdentifier] = useState(""); // Username, email, or phone
+  const [password, setPassword] = useState("");
   // Giữ lại state cho lỗi từng trường nếu Input component không tự xử lý hoàn toàn
-  const [identifierError, setIdentifierError] = useState('');
-  const [passwordError, setPasswordError] = useState('');
+  const [identifierError, setIdentifierError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
 
   const { login, loading, error: authError } = useAuth(); // Đổi tên error để tránh trùng lặp
 
   const validateForm = () => {
     let isValid = true;
-    setIdentifierError('');
-    setPasswordError('');
+    setIdentifierError("");
+    setPasswordError("");
 
     if (!identifier.trim()) {
-      setIdentifierError('Username/Email/Phone is required');
+      setIdentifierError("Username/Email/Phone is required");
       isValid = false;
     }
 
     if (!password) {
-      setPasswordError('Password is required');
+      setPasswordError("Password is required");
       isValid = false;
     }
     return isValid;
   };
 
   const handleLogin = async () => {
-    if (!validateForm()) return;
+    console.log("Login button clicked", { identifier, password });
+    if (!validateForm()) {
+      console.log("Validation failed");
+      return;
+    }
 
     try {
-      // Giả sử hàm login của bạn nhận email/username làm tham số đầu
+      console.log("Calling login with:", { identifier, password });
       await login(identifier, password);
-      // Điều hướng được xử lý bởi AppNavigator dựa trên auth state
+      console.log("Login successful");
     } catch (err) {
-      // Lỗi từ authService đã được redux state (authError) xử lý,
-      // nhưng bạn có thể muốn log hoặc hiển thị thêm ở đây
-      console.log('Login submission error:', err);
+      console.error("Login error:", err.message, err.stack);
     }
   };
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardAvoid}>
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={styles.keyboardAvoid}
+      >
         <ScrollView
           contentContainerStyle={styles.scrollViewContent}
-          keyboardShouldPersistTaps="handled">
+          keyboardShouldPersistTaps="handled"
+        >
           <TouchableOpacity
             style={styles.helpButton}
             onPress={() => {
               /* Xử lý sự kiện nhấn nút trợ giúp */
-            }}>
+            }}
+          >
             <Text style={styles.helpIcon}>?</Text>
           </TouchableOpacity>
 
@@ -105,7 +110,8 @@ const LoginFormScreen = ({ navigation }) => {
             style={styles.forgotPasswordContainer}
             onPress={() => {
               /* Xử lý sự kiện quên mật khẩu */
-            }}>
+            }}
+          >
             <Text style={styles.forgotPasswordText}>Forgot password?</Text>
           </TouchableOpacity>
 
@@ -130,21 +136,22 @@ const LoginFormScreen = ({ navigation }) => {
           </View>
 
           <Text style={styles.termsText}>
-            By continuing, you agree to our{' '}
+            By continuing, you agree to our{" "}
             <Text
               style={styles.linkText}
               onPress={() => {
                 /* Điều hướng đến Terms of Service */
-              }}>
+              }}
+            >
               Terms of Service
-            </Text>{' '}
+            </Text>{" "}
             to learn how we collect, use and share your data.
           </Text>
         </ScrollView>
       </KeyboardAvoidingView>
       <View style={styles.footer}>
         <Text style={styles.noAccountText}>Don't have an account? </Text>
-        <TouchableOpacity onPress={() => navigation.navigate('Register')}>
+        <TouchableOpacity onPress={() => navigation.navigate("Register")}>
           <Text style={styles.signupText}>Sign up</Text>
         </TouchableOpacity>
       </View>
@@ -166,32 +173,32 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.lg, // Để có không gian cuộn
   },
   helpButton: {
-    position: 'absolute',
-    top: Platform.OS === 'ios' ? spacing.md : spacing.lg + 5, // Điều chỉnh vị trí cho SafeAreaView
+    position: "absolute",
+    top: Platform.OS === "ios" ? spacing.md : spacing.lg + 5, // Điều chỉnh vị trí cho SafeAreaView
     left: spacing.lg,
     zIndex: 1,
     backgroundColor: colors.border, // Màu nền cho icon
     width: 32,
     height: 32,
     borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   helpIcon: {
     fontSize: typography.fontSize.md,
     color: colors.textSecondary,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   title: {
     fontSize: typography.fontSize.xxl - 2, // Điều chỉnh kích thước
-    fontWeight: 'bold',
+    fontWeight: "bold",
     color: colors.black,
     marginTop: 80, // Khoảng cách từ top sau khi có help icon
     marginBottom: spacing.xl,
-    textAlign: 'left', // Căn lề trái
+    textAlign: "left", // Căn lề trái
   },
   errorContainer: {
-    backgroundColor: '#fef1f3', // Màu nền cho box lỗi chung
+    backgroundColor: "#fef1f3", // Màu nền cho box lỗi chung
     borderRadius: 8,
     padding: spacing.sm,
     marginBottom: spacing.md,
@@ -213,18 +220,18 @@ const styles = StyleSheet.create({
     // borderRadius: 8, // Đã có trong Input.js
   },
   forgotPasswordContainer: {
-    alignSelf: 'flex-end', // Căn phải
+    alignSelf: "flex-end", // Căn phải
     marginBottom: spacing.lg,
   },
   forgotPasswordText: {
     color: colors.primary,
     fontSize: typography.fontSize.sm,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   loginButton: {
     // Kế thừa từ Button.js, chỉ ghi đè nếu cần
     // backgroundColor: colors.primary, // Đã có trong Button.js type primary
-    width: '100%', // Chiều rộng tối đa
+    width: "100%", // Chiều rộng tối đa
     paddingVertical: 14, // Tăng padding cho nút to hơn
     marginTop: spacing.sm, // Khoảng cách nhỏ
   },
@@ -237,38 +244,38 @@ const styles = StyleSheet.create({
   orLoginWithText: {
     fontSize: typography.fontSize.sm,
     color: colors.textSecondary,
-    textAlign: 'center',
+    textAlign: "center",
     marginVertical: spacing.xl,
   },
   socialLoginContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     marginBottom: spacing.xl,
   },
   socialButtonPlaceholder: {
     backgroundColor: colors.border, // Màu nền placeholder
     height: 50,
-    width: '48%', // Chia đôi không gian
+    width: "48%", // Chia đôi không gian
     borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   termsText: {
     fontSize: typography.fontSize.xs,
     color: colors.textSecondary,
-    textAlign: 'center',
+    textAlign: "center",
     lineHeight: typography.fontSize.xs * 1.5,
     marginTop: spacing.lg,
     marginBottom: 100, // Để có không gian cho footer cố định
   },
   linkText: {
     color: colors.primary,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   footer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
     paddingVertical: spacing.md,
     borderTopWidth: 1,
     borderTopColor: colors.border,
@@ -281,7 +288,7 @@ const styles = StyleSheet.create({
   signupText: {
     fontSize: typography.fontSize.sm,
     color: colors.primary,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
 });
 
