@@ -15,7 +15,10 @@ import {
   Alert,
 } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
-import { createPost as createPostAction } from "../../redux/actions/postsActions";
+import {
+  createPost as createPostAction,
+  fetchPosts,
+} from "../../redux/actions/postsActions";
 import { colors, spacing, typography } from "../../theme";
 import { useAuth } from "../../hooks/useAuth";
 import { imageService } from "../../api/imageService";
@@ -85,9 +88,7 @@ const CreatePostScreen = ({ navigation }) => {
       if (imageUri) {
         setIsUploadingImage(true);
         try {
-          console.log("Uploading image with URI:", imageUri); // Debug log
-
-          // Validate and upload only file:// URIs, as in EditProfileScreen
+          console.log("Uploading image with URI:", imageUri);
           let imageString = imageUri;
           if (imageUri.startsWith("file://")) {
             console.log("Validating file:// URI:", imageUri);
@@ -96,9 +97,9 @@ const CreatePostScreen = ({ navigation }) => {
               throw new Error("Selected image does not exist");
             }
             imageString = await imageService.getImageString(imageUri);
-            console.log("Cloudinary URL received:", imageString); // Debug log
+            console.log("Cloudinary URL received:", imageString);
           } else {
-            console.log("Using existing URI (non-file://):", imageUri); // Debug log
+            console.log("Using existing URI (non-file://):", imageUri);
           }
           images = [imageString];
         } catch (error) {
@@ -124,11 +125,15 @@ const CreatePostScreen = ({ navigation }) => {
         privacy: "public",
       };
 
-      console.log("Posting data:", postData); // Debug log
+      console.log("Posting data:", postData);
       await dispatch(createPostAction(postData));
       setContent("");
       setImageUri(null);
-      console.log("Navigating to Feed tab"); // Debug log
+
+      // Dispatch fetchPosts to refresh posts from the server
+      await dispatch(fetchPosts());
+
+      console.log("Navigating to Feed tab");
       navigation.navigate("Main", { screen: "Feed" });
     } catch (error) {
       console.error("Create post error:", error);
