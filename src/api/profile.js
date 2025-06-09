@@ -1,5 +1,4 @@
 // src/api/profileService.js
-
 import apiClient from "./client";
 
 export const profileService = {
@@ -44,6 +43,7 @@ export const profileService = {
       );
     }
   },
+
   changePassword: async ({ oldPassword, newPassword }) => {
     try {
       const response = await apiClient.put("/users/me/change-password", {
@@ -51,7 +51,7 @@ export const profileService = {
         newPassword,
       });
       console.log("Password change response:", response.data);
-      return response.data; // Return response for success feedback
+      return response.data;
     } catch (error) {
       console.error(
         "Change password failed:",
@@ -61,6 +61,122 @@ export const profileService = {
       throw new Error(
         error.response?.data?.error || "Failed to change password"
       );
+    }
+  },
+
+  getCurrentUserProfile: async () => {
+    try {
+      const response = await apiClient.get("/users/me");
+      console.log("Current user profile response:", response.data);
+      return response.data;
+    } catch (error) {
+      console.error(
+        "Fetch current user profile failed:",
+        error.message,
+        error.response?.data
+      );
+      throw new Error(
+        error.response?.data?.error || "Failed to fetch current user profile"
+      );
+    }
+  },
+
+  fetchUserProfileById: async (userId) => {
+    if (!userId) {
+      console.error("fetchUserProfileById: No userId provided");
+      throw new Error("User ID is required");
+    }
+    try {
+      const response = await apiClient.get(`/users/${userId}`);
+      console.log(`User profile response for ID ${userId}:`, response.data);
+      return response.data;
+    } catch (error) {
+      console.error(
+        `Fetch user profile failed for ID ${userId}:`,
+        error.message,
+        error.response?.data
+      );
+      throw new Error(
+        error.response?.data?.error || "Failed to fetch user profile"
+      );
+    }
+  },
+
+  followUser: async (userId) => {
+    if (!userId) {
+      console.error("followUser: No userId provided");
+      throw new Error("User ID is required");
+    }
+    try {
+      const response = await apiClient.post(`/users/${userId}/follow`);
+      console.log(`Follow user response for ID ${userId}:`, response.data);
+      return response.data;
+    } catch (error) {
+      console.error(
+        `Follow user failed for ID ${userId}:`,
+        error.message,
+        error.response?.data
+      );
+      throw new Error(error.response?.data?.error || "Failed to follow user");
+    }
+  },
+
+  getFollowers: async (userId) => {
+    if (!userId) {
+      console.error("getFollowers: No userId provided");
+      throw new Error("User ID is required");
+    }
+    try {
+      const response = await apiClient.get(`/users/${userId}/followers`);
+      console.log(`Followers response for ID ${userId}:`, response.data);
+      return response.data;
+    } catch (error) {
+      console.error(
+        `Fetch followers failed for ID ${userId}:`,
+        error.message,
+        error.response?.data
+      );
+      throw new Error(
+        error.response?.data?.error || "Failed to fetch followers"
+      );
+    }
+  },
+
+  getFollowing: async () => {
+    try {
+      const response = await apiClient.get(`/users/me/following`);
+      console.log(`Following response:`, response.data.following);
+      return response.data.following;
+    } catch (error) {
+      console.error(
+        `Fetch following failed:`,
+        error.message,
+        error.response?.data
+      );
+      throw new Error(
+        error.response?.data?.error || "Failed to fetch following"
+      );
+    }
+  },
+
+  searchUsers: async (query) => {
+    if (!query) {
+      console.error("searchUsers: No query provided");
+      throw new Error("Search query is required");
+    }
+    try {
+      const response = await apiClient.get("/users/search", {
+        params: { query },
+      });
+      console.log(`Search users response for query "${query}":`, response.data);
+      return response.data;
+    } catch (error) {
+      console.error(
+        `Search users failed for query "${query}":`,
+        error.message,
+        error.response?.data
+      );
+      throw new Error(error.response?.data?.error || "Failed to search users");
     }
   },
 };

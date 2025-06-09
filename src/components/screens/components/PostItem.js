@@ -1,18 +1,19 @@
+// screens/components/PostItem.js
 import React, { useState } from "react";
 import { View, Text, StyleSheet, Image, TouchableOpacity } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
 import { colors, spacing, typography } from "../../../theme";
 import Icon from "react-native-vector-icons/Ionicons";
 import { likePost } from "../../../redux/actions/postsActions";
+import UserAvatarName from "./UserAvatarName";
 
 const PostItem = ({ post }) => {
   const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth || {});
   const { author, content, createdAt, likes, comments, images } = post;
-  const shares = post.shares || 0; // Remove random fallback
-  const saves = post.savedBy?.length || 0; // Remove random fallback
+  const shares = post.shares || 0;
+  const saves = post.savedBy?.length || 0;
 
-  // Check if the current user has liked the post
   const isLiked = Array.isArray(likes) && user?._id && likes.includes(user._id);
   const [optimisticLiked, setOptimisticLiked] = useState(isLiked);
   const [optimisticLikeCount, setOptimisticLikeCount] = useState(
@@ -35,11 +36,6 @@ const PostItem = ({ post }) => {
       return `${diffHour} ${diffHour > 1 ? "hours" : "hour"} ago`;
     if (diffDay < 7) return `${diffDay} ${diffDay > 1 ? "days" : "day"} ago`;
     return `${Math.floor(diffDay / 7)}w ago`;
-  };
-
-  const getContentSummary = (text, maxLength = 50) => {
-    if (text.length <= maxLength) return text;
-    return text.substr(0, text.lastIndexOf(" ", maxLength)) + "...";
   };
 
   const handleLike = async () => {
@@ -71,16 +67,20 @@ const PostItem = ({ post }) => {
 
   return (
     <View style={styles.container}>
-      {/* Thông tin người đăng và nội dung */}
       <View style={styles.contentHeader}>
-        <Text style={styles.authorName}>
-          {author.username || "Unknown User"}
-        </Text>
-        <Text style={styles.captionText}>{content}</Text>
-        <Text style={styles.timestamp}>{formatTimestamp(createdAt)}</Text>
+        <View style={styles.headerLeft}>
+          <UserAvatarName userId={author?._id} />
+        </View>
+        <TouchableOpacity style={styles.optionsButton}>
+          <Icon
+            name="ellipsis-horizontal"
+            size={20}
+            color={colors.textSecondary}
+          />
+        </TouchableOpacity>
       </View>
-
-      {/* Hình ảnh bài đăng */}
+      <Text style={styles.captionText}>{content}</Text>
+      <Text style={styles.timestamp}>{formatTimestamp(createdAt)}</Text>
       {Array.isArray(images) && images.length > 0 && images[0] !== "string" && (
         <Image
           source={{ uri: images[0] }}
@@ -88,8 +88,6 @@ const PostItem = ({ post }) => {
           resizeMode="cover"
         />
       )}
-
-      {/* Thanh hành động (Likes, Comments, Shares, Saves) */}
       <View style={styles.actionBar}>
         <View style={styles.actionGroup}>
           <TouchableOpacity
@@ -100,6 +98,7 @@ const PostItem = ({ post }) => {
             <Icon
               name={optimisticLiked ? "heart" : "heart-outline"}
               size={26}
+              genoux
               color={optimisticLiked ? colors.error : colors.textSecondary}
             />
           </TouchableOpacity>
@@ -136,19 +135,15 @@ const PostItem = ({ post }) => {
           <Text style={styles.actionCount}>{saves}</Text>
         </View>
       </View>
-
-      {/* Tóm tắt nội dung và bình luận */}
       <View style={styles.engagementSummary}>
         {comments.length > 0 && (
           <View style={styles.commentSection}>
-            {/* Preview first comment */}
             <Text style={styles.commentPreview} numberOfLines={1}>
               <Text style={styles.commentAuthor}>
                 {comments[0].author?.username || "Unknown User"}{" "}
               </Text>
               {comments[0].content}
             </Text>
-            {/* View all comments button */}
             <TouchableOpacity style={styles.viewCommentsButton}>
               <Text style={styles.viewCommentsText}>
                 View all {comments.length} comments
@@ -167,25 +162,32 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   contentHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: spacing.md,
     paddingTop: spacing.md,
     paddingBottom: spacing.sm,
   },
-  authorName: {
-    fontSize: typography.fontSize.lg,
-    fontWeight: "bold",
-    color: colors.text,
-    marginBottom: spacing.xs,
+  headerLeft: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  optionsButton: {
+    padding: spacing.xs,
   },
   captionText: {
     fontSize: typography.fontSize.md - 1,
     color: colors.text,
     lineHeight: typography.fontSize.md * 1.4,
+    paddingHorizontal: spacing.md,
     marginBottom: spacing.xs,
   },
   timestamp: {
     fontSize: typography.fontSize.xs,
     color: colors.textSecondary,
+    paddingHorizontal: spacing.md,
     marginBottom: spacing.sm,
   },
   postImage: {
@@ -218,15 +220,6 @@ const styles = StyleSheet.create({
   engagementSummary: {
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
-  },
-  summaryText: {
-    fontSize: typography.fontSize.sm,
-    color: colors.text,
-    lineHeight: typography.fontSize.sm * 1.4,
-    marginBottom: spacing.sm,
-  },
-  summaryAuthorName: {
-    fontWeight: "bold",
   },
   commentSection: {
     marginTop: spacing.xs,

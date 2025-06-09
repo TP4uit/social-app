@@ -24,6 +24,7 @@ import GroupChatScreen from "../components/screens/GroupChatScreen";
 import EditProfileScreen from "../components/screens/EditProfileScreen";
 import SimpleCameraScreen from "../components/screens/SimpleCameraScreen";
 import ChangePasswordScreen from "../components/screens/ChangePasswordScreen";
+import OtherProfileScreen from "../components/screens/OtherProfileScreen";
 
 // Create navigators
 const Stack = createNativeStackNavigator();
@@ -150,6 +151,7 @@ const AppNavigator = () => {
               name="ChangePassword"
               component={ChangePasswordScreen}
             />
+            <Stack.Screen name="OtherProfile" component={OtherProfileScreen} />
           </Stack.Navigator>
         ) : (
           <AuthNavigator />
