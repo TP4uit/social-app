@@ -1,11 +1,10 @@
-// src/navigation/index.js
 import React from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import Icon from "react-native-vector-icons/Ionicons";
 import { useSelector } from "react-redux";
-import { Text, StatusBar, Platform, Image } from "react-native";
+import { Text, StatusBar, Platform } from "react-native";
 import { colors } from "../theme";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
@@ -25,6 +24,8 @@ import EditProfileScreen from "../components/screens/EditProfileScreen";
 import SimpleCameraScreen from "../components/screens/SimpleCameraScreen";
 import ChangePasswordScreen from "../components/screens/ChangePasswordScreen";
 import OtherProfileScreen from "../components/screens/OtherProfileScreen";
+import CommunityScreen from "../components/screens/CommunityScreen";
+import CommunityDetailScreen from "../components/screens/CommunityDetailScreen";
 
 // Create navigators
 const Stack = createNativeStackNavigator();
@@ -50,9 +51,8 @@ const AuthNavigator = () => {
 
 // Simple icon component for tab navigator
 const TabIcon = ({ name, focused, color, size }) => {
-  // Thêm props color và size từ TabNavigator
   let iconName;
-  const iconSize = focused ? size + 2 : size; // Icon có thể to hơn một chút khi active
+  const iconSize = focused ? size + 2 : size;
 
   switch (name) {
     case "Feed":
@@ -61,17 +61,17 @@ const TabIcon = ({ name, focused, color, size }) => {
     case "Search":
       iconName = focused ? "search" : "search-outline";
       break;
-    case "Post": // CreatePostScreen
+    case "Post":
       iconName = focused ? "add-circle" : "add-circle-outline";
       break;
-    case "Activity": // NotificationsScreen
+    case "Activity":
       iconName = focused ? "heart" : "heart-outline";
       break;
-    case "Profile": // ProfileScreen
+    case "Profile":
       iconName = focused ? "person" : "person-outline";
       break;
     default:
-      iconName = "ellipse-outline"; // Icon mặc định nếu có lỗi
+      iconName = "ellipse-outline";
   }
 
   return <Icon name={iconName} size={iconSize} color={color} />;
@@ -82,7 +82,6 @@ const TabNavigator = () => {
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
-        // Truyền route vào screenOptions
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textSecondary,
         headerShown: false,
@@ -91,9 +90,8 @@ const TabNavigator = () => {
           borderTopColor: colors.border,
           backgroundColor: colors.white,
           height: 60,
-          paddingTop: 10, // Có thể điều chỉnh nếu cần
+          paddingTop: 10,
         },
-        // Cập nhật tabBarIcon để truyền props chuẩn
         tabBarIcon: ({ focused, color, size }) => {
           return (
             <TabIcon
@@ -104,23 +102,13 @@ const TabNavigator = () => {
             />
           );
         },
-        tabBarLabel: "", // Giữ nguyên không hiển thị label
+        tabBarLabel: "",
       })}
     >
-      <Tab.Screen
-        name="Feed"
-        component={FeedScreen}
-        // options đã được xử lý ở screenOptions chung
-      />
+      <Tab.Screen name="Feed" component={FeedScreen} />
       <Tab.Screen name="Search" component={SearchScreen} />
-      <Tab.Screen
-        name="Post" // Đây là routeName cho CreatePostScreen
-        component={CreatePostScreen}
-      />
-      <Tab.Screen
-        name="Activity" // Đây là routeName cho NotificationsScreen
-        component={NotificationsScreen}
-      />
+      <Tab.Screen name="Post" component={CreatePostScreen} />
+      <Tab.Screen name="Activity" component={NotificationsScreen} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
   );
@@ -130,7 +118,6 @@ const TabNavigator = () => {
 const AppNavigator = () => {
   const { isAuthenticated } = useSelector((state) => state.auth);
 
-  // Ensure the status bar is properly set
   return (
     <SafeAreaProvider>
       <StatusBar
@@ -152,6 +139,12 @@ const AppNavigator = () => {
               component={ChangePasswordScreen}
             />
             <Stack.Screen name="OtherProfile" component={OtherProfileScreen} />
+            <Stack.Screen name="Communities" component={CommunityScreen} />
+            <Stack.Screen
+              name="CommunityDetail"
+              component={CommunityDetailScreen}
+            />
+            {/* New screen */}
           </Stack.Navigator>
         ) : (
           <AuthNavigator />

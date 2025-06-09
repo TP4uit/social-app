@@ -202,16 +202,24 @@ const FeedScreen = ({ navigation }) => {
           <Icon name="add-circle-outline" size={28} color={colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerLogo}>Drama Social</Text>
-        <TouchableOpacity
-          style={styles.headerIconContainer}
-          onPress={() => navigation.navigate("Chats")}
-        >
-          <Icon
-            name="chatbubble-ellipses-outline"
-            size={26}
-            color={colors.text}
-          />
-        </TouchableOpacity>
+        <View style={styles.headerRightIcons}>
+          <TouchableOpacity
+            style={styles.headerIconContainer}
+            onPress={() => navigation.navigate("Communities")}
+          >
+            <Icon name="people-outline" size={26} color={colors.text} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.headerIconContainer}
+            onPress={() => navigation.navigate("Chats")}
+          >
+            <Icon
+              name="chatbubble-ellipses-outline"
+              size={26}
+              color={colors.text}
+            />
+          </TouchableOpacity>
+        </View>
       </View>
       <FlatList
         data={validPosts}
@@ -256,6 +264,10 @@ const styles = StyleSheet.create({
   },
   headerIconContainer: {
     padding: spacing.xs,
+  },
+  headerRightIcons: {
+    flexDirection: "row",
+    alignItems: "center",
   },
   headerLogo: {
     fontSize: typography.fontSize.xl,
