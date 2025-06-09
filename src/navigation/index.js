@@ -27,6 +27,7 @@ import OtherProfileScreen from "../components/screens/OtherProfileScreen";
 import CommunityScreen from "../components/screens/CommunityScreen";
 import CommunityDetailScreen from "../components/screens/CommunityDetailScreen";
 import CreateCommunityPostScreen from "../components/screens/CreateCommunityPostScreen";
+import EditCommunityScreen from "../components/screens/EditCommunityScreen";
 
 // Create navigators
 const Stack = createNativeStackNavigator();
@@ -149,6 +150,10 @@ const AppNavigator = () => {
             <Stack.Screen
               name="CreateCommunityPost"
               component={CreateCommunityPostScreen}
+            />
+            <Stack.Screen
+              name="EditCommunity"
+              component={EditCommunityScreen}
             />
           </Stack.Navigator>
         ) : (

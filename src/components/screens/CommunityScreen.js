@@ -11,11 +11,19 @@ import {
   Platform,
   Modal,
   TextInput,
+  Image,
+  Alert,
 } from "react-native";
 import { useSelector } from "react-redux";
 import Icon from "react-native-vector-icons/Ionicons";
+import * as ImagePicker from "expo-image-picker";
+import * as FileSystem from "expo-file-system";
 import { colors, spacing, typography } from "../../theme";
 import { communityService } from "../../api/communityService";
+import { imageService } from "../../api/imageService";
+
+const DEFAULT_AVATAR = "https://i.pravatar.cc/150?u=defaultCommunity";
+const DEFAULT_BANNER = "https://via.placeholder.com/150";
 
 const CommunityItem = ({ item, onPress }) => {
   return (
@@ -51,6 +59,8 @@ const CommunityScreen = ({ navigation }) => {
     name: "",
     description: "",
     privacy: "public",
+    avatar: DEFAULT_AVATAR,
+    banner: DEFAULT_BANNER,
   });
   const { user } = useSelector((state) => state.auth);
 
@@ -70,19 +80,77 @@ const CommunityScreen = ({ navigation }) => {
     }
   };
 
+  const handlePickImage = async (field) => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert(
+        "Permission Denied",
+        "Please allow access to your photos to upload an image."
+      );
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: field === "avatar" ? [1, 1] : [16, 9],
+      quality: 0.8,
+    });
+
+    if (!result.canceled) {
+      const imageUri = result.assets[0].uri;
+      setNewCommunity((prev) => ({ ...prev, [field]: imageUri }));
+    }
+  };
+
   const handleCreateCommunity = async () => {
+    if (!newCommunity.name.trim()) {
+      Alert.alert("Error", "Community name is required");
+      return;
+    }
+
     try {
       setLoading(true);
+
+      let avatarString = newCommunity.avatar;
+      if (newCommunity.avatar.startsWith("file://")) {
+        const fileInfo = await FileSystem.getInfoAsync(newCommunity.avatar);
+        if (!fileInfo.exists) {
+          throw new Error("Selected avatar image does not exist");
+        }
+        avatarString = await imageService.getImageString(newCommunity.avatar);
+      }
+
+      let bannerString = newCommunity.banner;
+      if (newCommunity.banner.startsWith("file://")) {
+        const fileInfo = await FileSystem.getInfoAsync(newCommunity.banner);
+        if (!fileInfo.exists) {
+          throw new Error("Selected banner image does not exist");
+        }
+        bannerString = await imageService.getImageString(newCommunity.banner);
+      }
+
       await communityService.createCommunity({
-        ...newCommunity,
-        avatar: "", // Optional: Add avatar upload logic later
-        banner: "", // Optional: Add banner upload logic later
+        name: newCommunity.name,
+        description: newCommunity.description,
+        privacy: newCommunity.privacy,
+        avatar: avatarString,
+        banner: bannerString,
       });
+
       setModalVisible(false);
-      setNewCommunity({ name: "", description: "", privacy: "public" });
-      fetchCommunities(); // Refresh the list
+      setNewCommunity({
+        name: "",
+        description: "",
+        privacy: "public",
+        avatar: DEFAULT_AVATAR,
+        banner: DEFAULT_BANNER,
+      });
+      fetchCommunities();
+      Alert.alert("Success", "Community created successfully!");
     } catch (err) {
       setError(err.message);
+      Alert.alert("Error", err.message || "Failed to create community");
     } finally {
       setLoading(false);
     }
@@ -159,23 +227,55 @@ const CommunityScreen = ({ navigation }) => {
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Create New Community</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Community Name"
-              value={newCommunity.name}
-              onChangeText={(text) =>
-                setNewCommunity({ ...newCommunity, name: text })
-              }
-            />
-            <TextInput
-              style={[styles.input, styles.descriptionInput]}
-              placeholder="Description"
-              value={newCommunity.description}
-              onChangeText={(text) =>
-                setNewCommunity({ ...newCommunity, description: text })
-              }
-              multiline
-            />
+            <View style={styles.imagePickerContainer}>
+              <Text style={styles.label}>Avatar</Text>
+              <Image
+                source={{ uri: newCommunity.avatar }}
+                style={styles.avatarPreview}
+              />
+              <TouchableOpacity
+                style={styles.imagePickerButton}
+                onPress={() => handlePickImage("avatar")}
+              >
+                <Text style={styles.imagePickerButtonText}>Choose Avatar</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.imagePickerContainer}>
+              <Text style={styles.label}>Banner</Text>
+              <Image
+                source={{ uri: newCommunity.banner }}
+                style={styles.bannerPreview}
+              />
+              <TouchableOpacity
+                style={styles.imagePickerButton}
+                onPress={() => handlePickImage("banner")}
+              >
+                <Text style={styles.imagePickerButtonText}>Choose Banner</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Community Name</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Community Name"
+                value={newCommunity.name}
+                onChangeText={(text) =>
+                  setNewCommunity({ ...newCommunity, name: text })
+                }
+              />
+            </View>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Description</Text>
+              <TextInput
+                style={[styles.input, styles.descriptionInput]}
+                placeholder="Description"
+                value={newCommunity.description}
+                onChangeText={(text) =>
+                  setNewCommunity({ ...newCommunity, description: text })
+                }
+                multiline
+              />
+            </View>
             <View style={styles.privacyContainer}>
               <TouchableOpacity
                 style={[
@@ -230,7 +330,9 @@ const CommunityScreen = ({ navigation }) => {
                 onPress={handleCreateCommunity}
                 disabled={loading || !newCommunity.name}
               >
-                <Text style={styles.createButtonText}>Create</Text>
+                <Text style={styles.createButtonText}>
+                  {loading ? "Creating..." : "Create"}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -364,18 +466,54 @@ const styles = StyleSheet.create({
     color: colors.text,
     marginBottom: spacing.md,
   },
+  inputGroup: {
+    marginBottom: spacing.md,
+  },
+  label: {
+    fontSize: typography.fontSize.sm,
+    color: colors.textSecondary,
+    marginBottom: spacing.xs,
+  },
   input: {
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 8,
     padding: spacing.sm,
-    marginBottom: spacing.md,
     fontSize: typography.fontSize.md,
     color: colors.text,
   },
   descriptionInput: {
     height: 80,
     textAlignVertical: "top",
+  },
+  imagePickerContainer: {
+    marginBottom: spacing.md,
+    alignItems: "center",
+  },
+  avatarPreview: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    marginBottom: spacing.sm,
+    backgroundColor: colors.border,
+  },
+  bannerPreview: {
+    width: "100%",
+    height: 100,
+    borderRadius: 8,
+    marginBottom: spacing.sm,
+    backgroundColor: colors.border,
+  },
+  imagePickerButton: {
+    backgroundColor: colors.background,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    borderRadius: 8,
+  },
+  imagePickerButtonText: {
+    color: colors.primary,
+    fontSize: typography.fontSize.sm,
+    fontWeight: "500",
   },
   privacyContainer: {
     flexDirection: "row",

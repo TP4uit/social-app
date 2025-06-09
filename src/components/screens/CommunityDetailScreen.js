@@ -20,6 +20,9 @@ import { colors, spacing, typography } from "../../theme";
 import { communityService } from "../../api/communityService";
 import PostItem from "./components/PostItem";
 
+const DEFAULT_AVATAR = "https://i.pravatar.cc/150?u=defaultCommunity";
+const DEFAULT_BANNER = "https://via.placeholder.com/150";
+
 const CommunityDetailScreen = ({ route, navigation }) => {
   const { communityId } = route.params;
   const { user } = useSelector((state) => state.auth);
@@ -29,7 +32,7 @@ const CommunityDetailScreen = ({ route, navigation }) => {
   const [pendingJoinRequests, setPendingJoinRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [activeTab, setActiveTab] = useState("approved"); // approved, pendingPosts, pendingRequests
+  const [activeTab, setActiveTab] = useState("approved");
   const [inviteModalVisible, setInviteModalVisible] = useState(false);
   const [moderatorModalVisible, setModeratorModalVisible] = useState(false);
   const [inviteUserId, setInviteUserId] = useState("");
@@ -50,14 +53,17 @@ const CommunityDetailScreen = ({ route, navigation }) => {
   const fetchCommunityDetails = async () => {
     try {
       setLoading(true);
-      // Note: Swagger doesn't provide an endpoint to fetch community details, assuming one exists
       const response = await communityService.getMyCommunities();
       const communityData = response.find((c) => c._id === communityId);
       if (!communityData) throw new Error("Community not found");
-      setCommunity(communityData);
+      setCommunity({
+        ...communityData,
+        avatar: communityData.avatar || DEFAULT_AVATAR,
+        banner: communityData.banner || DEFAULT_BANNER,
+      });
       setIsMember(communityData.members?.includes(user._id));
       setIsModerator(communityData.moderators?.includes(user._id));
-      setIsCreator(communityData.creator === user._id);
+      setIsCreator(communityData.createdBy === user._id);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -90,10 +96,8 @@ const CommunityDetailScreen = ({ route, navigation }) => {
 
   const fetchPendingJoinRequests = async () => {
     try {
-      // Note: Swagger doesn't provide an endpoint for fetching pending join requests
-      // Assuming a hypothetical endpoint like `/community/{communityId}/requests/pending`
-      // Replace with actual endpoint when available
-      setPendingJoinRequests([]); // Placeholder
+      // Placeholder: Replace with actual endpoint when available
+      setPendingJoinRequests([]);
     } catch (err) {
       setError(err.message);
     }
@@ -146,7 +150,7 @@ const CommunityDetailScreen = ({ route, navigation }) => {
     try {
       await communityService.approvePost(postId);
       setPendingPosts(pendingPosts.filter((post) => post._id !== postId));
-      fetchApprovedPosts(); // Refresh approved posts
+      fetchApprovedPosts();
       Alert.alert("Success", "Post approved successfully!");
     } catch (err) {
       Alert.alert("Error", err.message);
@@ -190,7 +194,7 @@ const CommunityDetailScreen = ({ route, navigation }) => {
   const renderCommunityHeader = () => {
     if (!community) return null;
     return (
-      <View style={styles.communityHeader}>
+      <View style={styles.community}>
         {community.banner ? (
           <Image source={{ uri: community.banner }} style={styles.banner} />
         ) : (
@@ -223,7 +227,7 @@ const CommunityDetailScreen = ({ route, navigation }) => {
                 <TouchableOpacity
                   style={styles.actionButton}
                   onPress={() =>
-                    navigation.navigate("CreateCommunityPost", { communityId })
+                    navigation.navigate("Community Post", { communityId })
                   }
                 >
                   <Text style={styles.actionButtonText}>Create Post</Text>
@@ -291,12 +295,25 @@ const CommunityDetailScreen = ({ route, navigation }) => {
                   </TouchableOpacity>
                 )}
                 {isCreator && (
-                  <TouchableOpacity
-                    style={styles.actionButton}
-                    onPress={() => setModeratorModalVisible(true)}
-                  >
-                    <Text style={styles.actionButtonText}>Add Moderator</Text>
-                  </TouchableOpacity>
+                  <>
+                    <TouchableOpacity
+                      style={styles.actionButton}
+                      onPress={() => setModeratorModalVisible(true)}
+                    >
+                      <Text style={styles.actionButtonText}>Add Moderator</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.actionButton}
+                      onPress={() => {
+                        console.log("editcommunav");
+                        navigation.navigate("EditCommunity", { communityId });
+                      }}
+                    >
+                      <Text style={styles.actionButtonText}>
+                        Edit Community
+                      </Text>
+                    </TouchableOpacity>
+                  </>
                 )}
               </>
             ) : (
@@ -320,13 +337,13 @@ const CommunityDetailScreen = ({ route, navigation }) => {
       <PostItem post={item} />
       <View style={styles.pendingActions}>
         <TouchableOpacity
-          style={[styles.pendingActionButton, styles.approveButton]}
+          style={[styles.actionButton, styles.approveButton]}
           onPress={() => handleApprovePost(item._id)}
         >
           <Text style={styles.pendingActionText}>Approve</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.pendingActionButton, styles.rejectButton]}
+          style={[styles.actionButton, styles.rejectButton]}
           onPress={() => handleRejectPost(item._id)}
         >
           <Text style={styles.pendingActionText}>Reject</Text>
@@ -339,17 +356,16 @@ const CommunityDetailScreen = ({ route, navigation }) => {
     <View style={styles.pendingPostItem}>
       <View style={styles.joinRequestInfo}>
         <Text style={styles.joinRequestText}>User ID: {item.userId}</Text>
-        {/* Replace with user profile fetch if available */}
       </View>
       <View style={styles.pendingActions}>
         <TouchableOpacity
-          style={[styles.pendingActionButton, styles.approveButton]}
+          style={[styles.actionButton, styles.approveButton]}
           onPress={() => handleApproveJoinRequest(item.userId)}
         >
           <Text style={styles.pendingActionText}>Approve</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.pendingActionButton, styles.rejectButton]}
+          style={[styles.actionButton, styles.rejectButton]}
           onPress={() => handleRejectJoinRequest(item.userId)}
         >
           <Text style={styles.pendingActionText}>Reject</Text>
@@ -529,20 +545,20 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
-    height: 56,
+    height: 60,
   },
   backButton: {
     padding: spacing.xs,
     marginRight: spacing.sm,
   },
   headerTitle: {
-    fontSize: typography.fontSize.xl,
+    fontSize: typography.fontSize,
     fontWeight: "bold",
     color: colors.text,
     fontFamily: Platform.OS === "ios" ? "System" : "sans-serif-medium",
   },
   communityHeader: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.background,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
     paddingBottom: spacing.md,
@@ -591,7 +607,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   communityPrivacy: {
-    fontSize: typography.fontSize.xs,
+    fontSize: typography.fontSize.sm,
     color: colors.textSecondary,
     marginTop: spacing.xs,
   },
@@ -607,6 +623,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     borderRadius: 8,
     margin: spacing.xs,
+    color: "black",
   },
   joinButton: {
     backgroundColor: colors.success,
@@ -691,21 +708,21 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
   },
   emptyText: {
-    fontSize: typography.fontSize.lg,
+    fontSize: typography.fontSize,
     fontWeight: "bold",
     color: colors.text,
     marginBottom: spacing.sm,
   },
   emptySubText: {
-    fontSize: typography.fontSize.md,
+    fontSize: typography.fontSize.sm, // Corrected 'color.fontSize.sm' to 'typography.fontSize.sm'
     color: colors.textSecondary,
     textAlign: "center",
   },
   errorText: {
-    fontSize: typography.fontSize.md,
+    fontSize: typography.fontSize.sm,
     color: colors.error,
     textAlign: "center",
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
   },
   retryButton: {
     backgroundColor: colors.primary,
@@ -722,7 +739,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    backgroundColor: colors.modalBackground,
   },
   modalContent: {
     backgroundColor: colors.white,
@@ -760,19 +777,19 @@ const styles = StyleSheet.create({
     marginRight: spacing.sm,
   },
   cancelButtonText: {
+    fontSize: typography.fontSize.sm,
     color: colors.textSecondary,
-    fontSize: typography.fontSize.md,
   },
   createButton: {
     flex: 1,
     padding: spacing.sm,
     backgroundColor: colors.primary,
     borderRadius: 8,
-    alignItems: "center",
+    alignItems: "center", // Added missing closing brace and 'alignItems: "center"'
   },
   createButtonText: {
     color: colors.white,
-    fontSize: typography.fontSize.md,
+    fontSize: typography.fontSize.sm,
     fontWeight: "bold",
   },
 });
