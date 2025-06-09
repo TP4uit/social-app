@@ -334,4 +334,60 @@ export const communityService = {
       throw new Error(errorMessage);
     }
   },
+
+  approvePost: async (postId) => {
+    if (!postId) {
+      console.error("approvePost: No postId provided");
+      throw new Error("Post ID is required");
+    }
+    try {
+      const response = await apiClient.patch(
+        `/community/posts/${postId}/approve`
+      );
+      console.log(`Approve post response for ID ${postId}:`, response.data);
+      return response.data;
+    } catch (error) {
+      console.error(
+        `Approve post failed for ID ${postId}:`,
+        error.message,
+        error.response?.data
+      );
+      const errorMessage =
+        error.response?.status === 403
+          ? "No permission to approve this post"
+          : error.response?.status === 404
+          ? "Post not found"
+          : error.response?.data?.error || "Failed to approve post";
+      throw new Error(errorMessage);
+    }
+  },
+
+  // Placeholder for rejectPost, assuming a similar endpoint might exist
+  rejectPost: async (postId) => {
+    if (!postId) {
+      console.error("rejectPost: No postId provided");
+      throw new Error("Post ID is required");
+    }
+    try {
+      // Replace with actual endpoint when available, e.g., `/community/posts/${postId}/reject`
+      const response = await apiClient.patch(
+        `/community/posts/${postId}/reject`
+      );
+      console.log(`Reject post response for ID ${postId}:`, response.data);
+      return response.data;
+    } catch (error) {
+      console.error(
+        `Reject post failed for ID ${postId}:`,
+        error.message,
+        error.response?.data
+      );
+      const errorMessage =
+        error.response?.status === 403
+          ? "No permission to reject this post"
+          : error.response?.status === 404
+          ? "Post not found"
+          : error.response?.data?.error || "Failed to reject post";
+      throw new Error(errorMessage);
+    }
+  },
 };

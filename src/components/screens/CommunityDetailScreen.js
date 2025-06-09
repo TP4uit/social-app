@@ -18,7 +18,7 @@ import { useSelector } from "react-redux";
 import Icon from "react-native-vector-icons/Ionicons";
 import { colors, spacing, typography } from "../../theme";
 import { communityService } from "../../api/communityService";
-import PostItem from "./components/PostItem"; // Reuse PostItem from FeedScreen
+import PostItem from "./components/PostItem";
 
 const CommunityDetailScreen = ({ route, navigation }) => {
   const { communityId } = route.params;
@@ -26,9 +26,10 @@ const CommunityDetailScreen = ({ route, navigation }) => {
   const [community, setCommunity] = useState(null);
   const [approvedPosts, setApprovedPosts] = useState([]);
   const [pendingPosts, setPendingPosts] = useState([]);
+  const [pendingJoinRequests, setPendingJoinRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [showPending, setShowPending] = useState(false);
+  const [activeTab, setActiveTab] = useState("approved"); // approved, pendingPosts, pendingRequests
   const [inviteModalVisible, setInviteModalVisible] = useState(false);
   const [moderatorModalVisible, setModeratorModalVisible] = useState(false);
   const [inviteUserId, setInviteUserId] = useState("");
@@ -42,6 +43,7 @@ const CommunityDetailScreen = ({ route, navigation }) => {
     fetchApprovedPosts();
     if (isModerator || isCreator) {
       fetchPendingPosts();
+      fetchPendingJoinRequests();
     }
   }, [communityId, isModerator, isCreator]);
 
@@ -49,7 +51,6 @@ const CommunityDetailScreen = ({ route, navigation }) => {
     try {
       setLoading(true);
       // Note: Swagger doesn't provide an endpoint to fetch community details, assuming one exists
-      // For now, we'll simulate it. Replace with actual API if available.
       const response = await communityService.getMyCommunities();
       const communityData = response.find((c) => c._id === communityId);
       if (!communityData) throw new Error("Community not found");
@@ -84,6 +85,17 @@ const CommunityDetailScreen = ({ route, navigation }) => {
       } else {
         setError(err.message);
       }
+    }
+  };
+
+  const fetchPendingJoinRequests = async () => {
+    try {
+      // Note: Swagger doesn't provide an endpoint for fetching pending join requests
+      // Assuming a hypothetical endpoint like `/community/{communityId}/requests/pending`
+      // Replace with actual endpoint when available
+      setPendingJoinRequests([]); // Placeholder
+    } catch (err) {
+      setError(err.message);
     }
   };
 
@@ -131,22 +143,45 @@ const CommunityDetailScreen = ({ route, navigation }) => {
   };
 
   const handleApprovePost = async (postId) => {
-    // Note: Swagger doesn't provide an endpoint for approving posts, assuming similar to join request
     try {
-      // Replace with actual approve post endpoint if available
-      Alert.alert("Info", "Post approval not implemented yet.");
-      fetchPendingPosts();
+      await communityService.approvePost(postId);
+      setPendingPosts(pendingPosts.filter((post) => post._id !== postId));
+      fetchApprovedPosts(); // Refresh approved posts
+      Alert.alert("Success", "Post approved successfully!");
     } catch (err) {
       Alert.alert("Error", err.message);
     }
   };
 
   const handleRejectPost = async (postId) => {
-    // Note: Swagger doesn't provide an endpoint for rejecting posts, assuming similar to join request
     try {
-      // Replace with actual reject post endpoint if available
-      Alert.alert("Info", "Post rejection not implemented yet.");
-      fetchPendingPosts();
+      await communityService.rejectPost(postId);
+      setPendingPosts(pendingPosts.filter((post) => post._id !== postId));
+      Alert.alert("Success", "Post rejected successfully!");
+    } catch (err) {
+      Alert.alert("Error", err.message);
+    }
+  };
+
+  const handleApproveJoinRequest = async (userId) => {
+    try {
+      await communityService.approveJoinRequest(communityId, userId);
+      setPendingJoinRequests(
+        pendingJoinRequests.filter((req) => req.userId !== userId)
+      );
+      Alert.alert("Success", "Join request approved!");
+    } catch (err) {
+      Alert.alert("Error", err.message);
+    }
+  };
+
+  const handleRejectJoinRequest = async (userId) => {
+    try {
+      await communityService.rejectJoinRequest(communityId, userId);
+      setPendingJoinRequests(
+        pendingJoinRequests.filter((req) => req.userId !== userId)
+      );
+      Alert.alert("Success", "Join request rejected!");
     } catch (err) {
       Alert.alert("Error", err.message);
     }
@@ -194,14 +229,58 @@ const CommunityDetailScreen = ({ route, navigation }) => {
                   <Text style={styles.actionButtonText}>Create Post</Text>
                 </TouchableOpacity>
                 {(isModerator || isCreator) && (
-                  <TouchableOpacity
-                    style={styles.actionButton}
-                    onPress={() => setShowPending(!showPending)}
-                  >
-                    <Text style={styles.actionButtonText}>
-                      {showPending ? "Show Approved" : "Show Pending"}
-                    </Text>
-                  </TouchableOpacity>
+                  <View style={styles.tabContainer}>
+                    <TouchableOpacity
+                      style={[
+                        styles.tabButton,
+                        activeTab === "approved" && styles.tabButtonActive,
+                      ]}
+                      onPress={() => setActiveTab("approved")}
+                    >
+                      <Text
+                        style={[
+                          styles.tabText,
+                          activeTab === "approved" && styles.tabTextActive,
+                        ]}
+                      >
+                        Posts
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[
+                        styles.tabButton,
+                        activeTab === "pendingPosts" && styles.tabButtonActive,
+                      ]}
+                      onPress={() => setActiveTab("pendingPosts")}
+                    >
+                      <Text
+                        style={[
+                          styles.tabText,
+                          activeTab === "pendingPosts" && styles.tabTextActive,
+                        ]}
+                      >
+                        Pending Posts
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[
+                        styles.tabButton,
+                        activeTab === "pendingRequests" &&
+                          styles.tabButtonActive,
+                      ]}
+                      onPress={() => setActiveTab("pendingRequests")}
+                    >
+                      <Text
+                        style={[
+                          styles.tabText,
+                          activeTab === "pendingRequests" &&
+                            styles.tabTextActive,
+                        ]}
+                      >
+                        Join Requests
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
                 )}
                 {(isModerator || isCreator) && (
                   <TouchableOpacity
@@ -256,6 +335,29 @@ const CommunityDetailScreen = ({ route, navigation }) => {
     </View>
   );
 
+  const renderPendingJoinRequestItem = ({ item }) => (
+    <View style={styles.pendingPostItem}>
+      <View style={styles.joinRequestInfo}>
+        <Text style={styles.joinRequestText}>User ID: {item.userId}</Text>
+        {/* Replace with user profile fetch if available */}
+      </View>
+      <View style={styles.pendingActions}>
+        <TouchableOpacity
+          style={[styles.pendingActionButton, styles.approveButton]}
+          onPress={() => handleApproveJoinRequest(item.userId)}
+        >
+          <Text style={styles.pendingActionText}>Approve</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.pendingActionButton, styles.rejectButton]}
+          onPress={() => handleRejectJoinRequest(item.userId)}
+        >
+          <Text style={styles.pendingActionText}>Reject</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
   const renderEmptyComponent = () => {
     if (loading) {
       return (
@@ -280,15 +382,45 @@ const CommunityDetailScreen = ({ route, navigation }) => {
     return (
       <View style={styles.emptyContainer}>
         <Text style={styles.emptyText}>
-          {showPending ? "No pending posts" : "No approved posts yet"}
+          {activeTab === "approved"
+            ? "No approved posts yet"
+            : activeTab === "pendingPosts"
+            ? "No pending posts"
+            : "No pending join requests"}
         </Text>
-        {isMember && (
+        {isMember && activeTab === "approved" && (
           <Text style={styles.emptySubText}>
             Create a post to share with the community!
           </Text>
         )}
       </View>
     );
+  };
+
+  const getDataForTab = () => {
+    switch (activeTab) {
+      case "approved":
+        return approvedPosts;
+      case "pendingPosts":
+        return pendingPosts;
+      case "pendingRequests":
+        return pendingJoinRequests;
+      default:
+        return [];
+    }
+  };
+
+  const getRenderItemForTab = () => {
+    switch (activeTab) {
+      case "approved":
+        return renderPostItem;
+      case "pendingPosts":
+        return renderPendingPostItem;
+      case "pendingRequests":
+        return renderPendingJoinRequestItem;
+      default:
+        return renderPostItem;
+    }
   };
 
   return (
@@ -304,8 +436,8 @@ const CommunityDetailScreen = ({ route, navigation }) => {
         <Text style={styles.headerTitle}>{community?.name || "Community"}</Text>
       </View>
       <FlatList
-        data={showPending ? pendingPosts : approvedPosts}
-        renderItem={showPending ? renderPendingPostItem : renderPostItem}
+        data={getDataForTab()}
+        renderItem={getRenderItemForTab()}
         keyExtractor={(item) =>
           item._id?.toString() || Math.random().toString()
         }
@@ -487,12 +619,48 @@ const styles = StyleSheet.create({
     fontSize: typography.fontSize.sm,
     fontWeight: "bold",
   },
+  tabContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    marginVertical: spacing.sm,
+  },
+  tabButton: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 8,
+    marginHorizontal: spacing.xs,
+  },
+  tabButtonActive: {
+    borderColor: colors.primary,
+    backgroundColor: colors.primaryLight,
+  },
+  tabText: {
+    fontSize: typography.fontSize.sm,
+    color: colors.textSecondary,
+  },
+  tabTextActive: {
+    color: colors.primary,
+    fontWeight: "bold",
+  },
   listContent: {
     paddingBottom: spacing.lg,
   },
   pendingPostItem: {
     marginHorizontal: spacing.md,
     marginBottom: spacing.sm,
+  },
+  joinRequestInfo: {
+    padding: spacing.md,
+    backgroundColor: colors.white,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  joinRequestText: {
+    fontSize: typography.fontSize.md,
+    color: colors.text,
   },
   pendingActions: {
     flexDirection: "row",
