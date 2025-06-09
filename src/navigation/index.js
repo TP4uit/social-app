@@ -26,6 +26,7 @@ import ChangePasswordScreen from "../components/screens/ChangePasswordScreen";
 import OtherProfileScreen from "../components/screens/OtherProfileScreen";
 import CommunityScreen from "../components/screens/CommunityScreen";
 import CommunityDetailScreen from "../components/screens/CommunityDetailScreen";
+import CreateCommunityPostScreen from "../components/screens/CreateCommunityPostScreen";
 
 // Create navigators
 const Stack = createNativeStackNavigator();
@@ -145,6 +146,10 @@ const AppNavigator = () => {
               component={CommunityDetailScreen}
             />
             {/* New screen */}
+            <Stack.Screen
+              name="CreateCommunityPost"
+              component={CreateCommunityPostScreen}
+            />
           </Stack.Navigator>
         ) : (
           <AuthNavigator />
