@@ -25,7 +25,7 @@ const DEFAULT_BANNER = "https://via.placeholder.com/150";
 
 const CommunityDetailScreen = ({ route, navigation }) => {
   const { communityId } = route.params;
-  const { user } = useSelector((state) => state.auth);
+  const { user } = useSelector((state) => state.auth).user;
   const [community, setCommunity] = useState(null);
   const [approvedPosts, setApprovedPosts] = useState([]);
   const [pendingPosts, setPendingPosts] = useState([]);
@@ -227,7 +227,7 @@ const CommunityDetailScreen = ({ route, navigation }) => {
                 <TouchableOpacity
                   style={styles.actionButton}
                   onPress={() =>
-                    navigation.navigate("Community Post", { communityId })
+                    navigation.navigate("CreateCommunityPost", { communityId })
                   }
                 >
                   <Text style={styles.actionButtonText}>Create Post</Text>

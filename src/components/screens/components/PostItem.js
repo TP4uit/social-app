@@ -1,15 +1,17 @@
-// screens/components/PostItem.js
 import React, { useState } from "react";
 import { View, Text, StyleSheet, Image, TouchableOpacity } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
-import { colors, spacing, typography } from "../../../theme";
 import Icon from "react-native-vector-icons/Ionicons";
-import { likePost } from "../../../redux/actions/postsActions";
 import UserAvatarName from "./UserAvatarName";
+import CommentModal from "./CommentModal";
+import { colors, spacing, typography } from "../../../theme"; // Restore imports
+import { likePost } from "../../../redux/actions/postsActions";
 
 const PostItem = ({ post }) => {
   const dispatch = useDispatch();
-  const { user } = useSelector((state) => state.auth || {});
+  const { user } = useSelector((state) => state.auth).user;
+  console.log("User from PostItem:", { userId: user?._id, user }); // Debug auth state
+
   const { author, content, createdAt, likes, comments, images } = post;
   const shares = post.shares || 0;
   const saves = post.savedBy?.length || 0;
@@ -20,6 +22,7 @@ const PostItem = ({ post }) => {
     likes?.length || 0
   );
   const [loading, setLoading] = useState(false);
+  const [commentModalVisible, setCommentModalVisible] = useState(false);
 
   const formatTimestamp = (dateString) => {
     const now = new Date();
@@ -40,6 +43,7 @@ const PostItem = ({ post }) => {
 
   const handleLike = async () => {
     if (!user?._id) {
+      console.log("No user ID, prompting login");
       alert("Please log in to like posts");
       return;
     }
@@ -55,14 +59,30 @@ const PostItem = ({ post }) => {
     setLoading(true);
 
     try {
+      console.log("Dispatching likePost:", {
+        postId: post._id,
+        userId: user._id,
+        newLiked,
+      });
       await dispatch(likePost(post._id, user._id, newLiked));
+      console.log("Like successful");
     } catch (error) {
+      console.error("Like error:", error.message, error.response?.data);
       setOptimisticLiked(isLiked);
       setOptimisticLikeCount(likes?.length || 0);
       alert(error.message || "Failed to like post");
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleOpenCommentModal = () => {
+    if (!user?._id) {
+      console.log("No user ID, prompting login for comments");
+      alert("Please log in to view or add comments");
+      return;
+    }
+    setCommentModalVisible(true);
   };
 
   return (
@@ -98,14 +118,16 @@ const PostItem = ({ post }) => {
             <Icon
               name={optimisticLiked ? "heart" : "heart-outline"}
               size={26}
-              genoux
               color={optimisticLiked ? colors.error : colors.textSecondary}
             />
           </TouchableOpacity>
           <Text style={styles.actionCount}>{optimisticLikeCount}</Text>
         </View>
         <View style={styles.actionGroup}>
-          <TouchableOpacity style={styles.actionButton}>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={handleOpenCommentModal}
+          >
             <Icon
               name="chatbubble-outline"
               size={24}
@@ -144,7 +166,10 @@ const PostItem = ({ post }) => {
               </Text>
               {comments[0].content}
             </Text>
-            <TouchableOpacity style={styles.viewCommentsButton}>
+            <TouchableOpacity
+              style={styles.viewCommentsButton}
+              onPress={handleOpenCommentModal}
+            >
               <Text style={styles.viewCommentsText}>
                 View all {comments.length} comments
               </Text>
@@ -152,6 +177,13 @@ const PostItem = ({ post }) => {
           </View>
         )}
       </View>
+
+      <CommentModal
+        visible={commentModalVisible}
+        onClose={() => setCommentModalVisible(false)}
+        postId={post._id}
+        postContent={content}
+      />
     </View>
   );
 };
@@ -201,8 +233,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.md,
     borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: colors.border,
+    borderBottomWidth: colors.border,
   },
   actionGroup: {
     flexDirection: "row",

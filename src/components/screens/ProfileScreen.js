@@ -82,6 +82,7 @@ const TABS = [
 
 const ProfileScreen = ({ navigation }) => {
   const { user } = useAuth(); // Lấy thông tin người dùng từ Redux store
+  console.log("user from profile", user);
   const [activeTab, setActiveTab] = useState(TABS[0].id); // Mặc định chọn tab Posts
 
   // Sử dụng dữ liệu người dùng từ Redux nếu có, nếu không thì dùng dữ liệu Figma mẫu

@@ -1,4 +1,3 @@
-// src/api/profileService.js
 import apiClient from "./client";
 
 export const profileService = {
@@ -31,7 +30,8 @@ export const profileService = {
         gender,
       });
       console.log("Profile update response:", response.data);
-      return response.data;
+      // Normalize response: return user object directly
+      return response.data.user || response.data;
     } catch (error) {
       console.error(
         "Profile update failed:",
@@ -68,7 +68,11 @@ export const profileService = {
     try {
       const response = await apiClient.get("/users/me");
       console.log("Current user profile response:", response.data);
-      return response.data;
+      // Normalize response: return { user, privacy }
+      return {
+        user: response.data.user || response.data,
+        privacy: response.data.privacy || null,
+      };
     } catch (error) {
       console.error(
         "Fetch current user profile failed:",
@@ -89,7 +93,11 @@ export const profileService = {
     try {
       const response = await apiClient.get(`/users/${userId}`);
       console.log(`User profile response for ID ${userId}:`, response.data);
-      return response.data;
+      // Normalize response: return { user, privacy }
+      return {
+        user: response.data.user || response.data,
+        privacy: response.data.privacy || null,
+      };
     } catch (error) {
       console.error(
         `Fetch user profile failed for ID ${userId}:`,

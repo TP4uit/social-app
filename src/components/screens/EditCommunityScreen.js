@@ -26,7 +26,7 @@ const DEFAULT_BANNER = "https://via.placeholder.com/150";
 
 const EditCommunityScreen = ({ route, navigation }) => {
   const { communityId } = route.params;
-  const { user } = useSelector((state) => state.auth);
+  const { user } = useSelector((state) => state.auth).user;
   const [communityData, setCommunityData] = useState({
     name: "",
     description: "",

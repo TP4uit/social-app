@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   Platform,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import { colors, spacing, typography } from "../../theme";
 import { communityService } from "../../api/communityService";
@@ -29,7 +30,7 @@ const CreateCommunityPostScreen = ({ route, navigation }) => {
       setLoading(true);
       await communityService.createPost(communityId, { content, image });
       Alert.alert("Success", "Post submitted for approval!");
-      navigation.goBack();
+      navigation.navigate("CommunityDetail", { communityId });
     } catch (err) {
       Alert.alert("Error", err.message);
     } finally {

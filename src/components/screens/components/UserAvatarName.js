@@ -18,7 +18,8 @@ const DEFAULT_USERNAME = "Unknown User";
 
 const UserAvatarName = ({ userId }) => {
   const navigation = useNavigation();
-  const currentUserId = useSelector((state) => state.auth.user?._id); // Get current user's ID
+  const currentUserId = useSelector((state) => state.auth.user?.user?._id); // Get current user's ID
+  console.log("current user id from ava name", currentUserId);
   const [userData, setUserData] = useState({
     username: DEFAULT_USERNAME,
     avatar: DEFAULT_AVATAR,
@@ -35,7 +36,9 @@ const UserAvatarName = ({ userId }) => {
       }
       try {
         setLoading(true);
-        const response = await profileService.fetchUserProfileById(userId);
+        const apiResponse = await profileService.fetchUserProfileById(userId);
+        const response = apiResponse.user;
+        console.log("response of user ava name", response);
         setUserData({
           username: response.username || DEFAULT_USERNAME,
           avatar: response.avatar || DEFAULT_AVATAR,
