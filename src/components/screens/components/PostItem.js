@@ -14,17 +14,18 @@ import { socketService } from "../../../api/socket";
 
 const PostItem = ({ post }) => {
   const dispatch = useDispatch();
-  const { user } = useSelector((state) => state.auth).user;
+  const currentUser = useSelector((state) => state.auth.user.user); // Sửa user thành currentUser
   const comments = useSelector(
     (state) => state.comments.commentsByPost[post._id] || []
   );
-  console.log("Post from PostItem:", post);
+  console.log("current user from PostItem:", currentUser);
 
   const { author, content, createdAt, likes, _id, images } = post;
   const shares = post.shares || 0;
   const saves = post.savedBy?.length || 0;
 
-  const isLiked = Array.isArray(likes) && user?._id && likes.includes(user._id);
+  const isLiked =
+    Array.isArray(likes) && currentUser?._id && likes.includes(currentUser._id);
   const [optimisticLiked, setOptimisticLiked] = useState(isLiked);
   const [optimisticLikeCount, setOptimisticLikeCount] = useState(
     likes?.length || 0
@@ -44,26 +45,27 @@ const PostItem = ({ post }) => {
       setIsFetchingComments(true);
       try {
         socket = await socketService.connect();
-        if (!socket || !socket.connected) {
-          console.error("Socket connection failed in PostItem");
-          alert("Failed to connect to server for real-time comments");
-          return;
-        }
-        console.log("Socket connected in PostItem:", socket.id);
-        socket.emit("join_post", _id);
-        console.log(`Joined post room: ${_id}`);
+        if (!socket) {
+          console.warn(
+            "Socket connection not available, comments may not update in real-time"
+          );
+          // Không dùng alert để tránh lặp lại
+        } else {
+          console.log("Socket connected in PostItem:", socket.id);
+          socket.emit("join_post", _id);
+          console.log(`Joined post room: ${_id}`);
 
-        socket.on("new_comment", (comment) => {
-          console.log("Received new comment:", comment);
-          dispatch(addComment(_id, comment));
-        });
+          socket.on("new_comment", (comment) => {
+            console.log("Received new comment:", comment);
+            dispatch(addComment(_id, comment));
+          });
+        }
 
         // Fetch comments
         await dispatch(fetchComments(_id));
         console.log("Fetched comments for post", _id);
       } catch (error) {
         console.error("Init error:", error.message, error.response?.data);
-        alert(`Failed to load comments: ${error.message}`);
       } finally {
         setIsFetchingComments(false);
       }
@@ -100,7 +102,7 @@ const PostItem = ({ post }) => {
   };
 
   const handleLike = async () => {
-    if (!user?._id) {
+    if (!currentUser?._id) {
       console.log("No user ID, prompting login");
       alert("Please log in to like posts");
       return;
@@ -119,10 +121,10 @@ const PostItem = ({ post }) => {
     try {
       console.log("Dispatching likePost:", {
         postId: post._id,
-        userId: user._id,
+        userId: currentUser._id,
         newLiked,
       });
-      await dispatch(likePost(post._id, user._id, newLiked));
+      await dispatch(likePost(post._id, currentUser._id, newLiked));
       console.log("Like successful");
     } catch (error) {
       console.error("Like error:", error.message, error.response?.data);
@@ -135,7 +137,7 @@ const PostItem = ({ post }) => {
   };
 
   const handleOpenCommentModal = () => {
-    if (!user?._id) {
+    if (!currentUser?._id) {
       console.log("No user ID, prompting login for comments");
       alert("Please log in to view or add comments");
       return;

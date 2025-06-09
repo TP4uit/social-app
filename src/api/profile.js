@@ -187,4 +187,12 @@ export const profileService = {
       throw new Error(error.response?.data?.error || "Failed to search users");
     }
   },
+  getAllUser: async () => {
+    try {
+      const res = await apiClient.get("/users");
+      return res;
+    } catch (error) {
+      console.log("fetch all users error: ", error);
+    }
+  },
 };

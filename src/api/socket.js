@@ -1,43 +1,107 @@
 import { io } from "socket.io-client";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { getAuthToken } from "../utils/auth";
 
-let socket = null;
+const SOCKET_URL = "http://localhost:3000";
 
-export const socketService = {
+const socketService = {
+  socket: null,
+  isConnecting: false,
+
   connect: async () => {
-    if (socket && socket.connected) return socket;
-
-    const token = await AsyncStorage.getItem("auth_token");
-    if (!token) {
-      console.error("No auth token found in AsyncStorage");
-      return null;
+    if (socketService.socket?.connected) {
+      console.log(
+        "Reusing existing socket connection:",
+        socketService.socket.id
+      );
+      return socketService.socket;
     }
 
-    socket = io("http://localhost:3000", {
-      auth: { token },
-    });
+    if (socketService.isConnecting) {
+      console.log("Connection in progress, waiting...");
+      return new Promise((resolve) => {
+        const checkConnection = setInterval(() => {
+          if (socketService.socket?.connected) {
+            clearInterval(checkConnection);
+            resolve(socketService.socket);
+          }
+        }, 100);
+      });
+    }
 
-    socket.on("connect", () => {
-      console.log("Socket connected:", socket.id);
-    });
+    try {
+      socketService.isConnecting = true;
+      const token = await getAuthToken();
+      if (!token) {
+        console.error("No auth token found");
+        socketService.isConnecting = false;
+        return null;
+      }
 
-    socket.on("connect_error", (err) => {
-      console.error("Socket connection error:", err.message);
-    });
+      socketService.socket = io(SOCKET_URL, {
+        auth: { token },
+        transports: ["websocket"],
+        reconnection: true,
+        reconnectionAttempts: 3,
+        reconnectionDelay: 1000,
+      });
 
-    socket.on("disconnect", () => {
-      console.log("Socket disconnected");
-    });
+      return new Promise((resolve, reject) => {
+        socketService.socket.on("connect", () => {
+          console.log("Socket connected:", socketService.socket.id);
+          socketService.isConnecting = false;
+          resolve(socketService.socket);
+        });
 
-    return socket;
+        socketService.socket.on("connect_error", (error) => {
+          console.error("Socket connection error:", error.message);
+          socketService.isConnecting = false;
+          socketService.socket = null;
+          reject(error);
+        });
+
+        socketService.socket.on("disconnect", (reason) => {
+          console.log("Socket disconnected:", reason);
+          socketService.isConnecting = false;
+          socketService.socket = null;
+        });
+      });
+    } catch (error) {
+      console.error("Socket connect error:", error.message);
+      socketService.isConnecting = false;
+      return null;
+    }
+  },
+
+  on: (event, callback) => {
+    if (socketService.socket) {
+      socketService.socket.on(event, callback);
+    } else {
+      console.error(`Cannot listen to ${event}: Socket not initialized`);
+    }
+  },
+
+  off: (event, callback) => {
+    if (socketService.socket) {
+      socketService.socket.off(event, callback);
+    }
+  },
+
+  emit: (event, data) => {
+    if (socketService.socket) {
+      socketService.socket.emit(event, data);
+    } else {
+      console.error(`Cannot emit ${event}: Socket not initialized`);
+    }
   },
 
   disconnect: () => {
-    if (socket) {
-      socket.disconnect();
-      socket = null;
+    if (socketService.socket) {
+      socketService.socket.disconnect();
+      socketService.socket = null;
+      socketService.isConnecting = false;
+      console.log("Socket manually disconnected");
     }
   },
-
-  getSocket: () => socket,
 };
+
+export { socketService };
