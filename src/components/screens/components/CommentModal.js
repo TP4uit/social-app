@@ -77,6 +77,7 @@ const CommentModal = ({ visible, onClose, postId, postContent }) => {
     setIsFetching(true);
     try {
       const response = await apiClient.get(`/comments/post/${postId}`);
+      console.log("commentList", response);
       setComments(response.data || []);
       setTimeout(() => {
         flatListRef.current?.scrollToEnd({ animated: false });

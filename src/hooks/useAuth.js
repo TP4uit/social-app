@@ -16,8 +16,8 @@ export const useAuth = () => {
   };
 
   return {
-    user: user.user,
-    userPrivacy: user.privacy,
+    user: user?.user,
+    userPrivacy: user?.privacy,
     loading,
     error,
     isAuthenticated,
