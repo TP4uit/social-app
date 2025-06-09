@@ -54,7 +54,6 @@ const CommentModal = ({ visible, onClose, postId, postContent }) => {
       socket.current.on("new_comment", (comment) => {
         console.log("Received new comment:", comment);
         dispatch(addComment(postId, comment));
-        // Fetch profile for new comment's author if not cached
         if (comment.author && !userProfiles[comment.author]) {
           fetchUserProfile(comment.author);
         }
@@ -248,7 +247,12 @@ const CommentModal = ({ visible, onClose, postId, postContent }) => {
               <Icon name="person" size={20} color={colors.textSecondary} />
             </View>
           )}
-          <Text style={styles.commentAuthor}>{profile.username}</Text>
+          <View style={styles.commentHeaderText}>
+            <Text style={styles.commentAuthor}>{profile.username}</Text>
+            <Text style={styles.commentTimestamp}>
+              {new Date(item.createdAt).toLocaleTimeString()}
+            </Text>
+          </View>
         </View>
         <Text style={styles.commentContent}>{item.content}</Text>
         {item.imageUrl && (
@@ -262,9 +266,6 @@ const CommentModal = ({ visible, onClose, postId, postContent }) => {
             resizeMode="contain"
           />
         )}
-        <Text style={styles.commentTimestamp}>
-          {new Date(item.createdAt).toLocaleTimeString()}
-        </Text>
       </View>
     );
   };
@@ -277,7 +278,7 @@ const CommentModal = ({ visible, onClose, postId, postContent }) => {
             <Icon name="close-outline" size={30} color={colors.text} />
           </TouchableOpacity>
           <Text style={styles.headerTitle} numberOfLines={1}>
-            Comments for Post
+            Comments
           </Text>
           <View style={styles.headerPlaceholder} />
         </View>
@@ -369,6 +370,8 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
+    backgroundColor: colors.white,
+    zIndex: 1,
   },
   closeButton: {
     padding: spacing.xs,
@@ -390,59 +393,77 @@ const styles = StyleSheet.create({
   },
   commentList: {
     padding: spacing.lg,
-    paddingBottom: spacing.xl,
+    paddingBottom: spacing.xxl, // Increased padding to account for input container
   },
   commentContainer: {
-    backgroundColor: colors.background,
-    padding: spacing.sm,
-    borderRadius: 8,
-    marginBottom: spacing.sm,
-    maxWidth: "80%",
+    backgroundColor: colors.white,
+    padding: spacing.md,
+    borderRadius: 12,
+    marginBottom: spacing.md,
+    maxWidth: "90%",
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3, // For Android shadow
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   sentComment: {
     backgroundColor: colors.primaryLight,
     alignSelf: "flex-end",
+    borderColor: colors.primary,
+    borderWidth: 1,
   },
   commentHeader: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: spacing.xs,
+    marginBottom: spacing.sm,
+  },
+  commentHeaderText: {
+    flex: 1,
+    flexDirection: "column",
   },
   commentAvatar: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     marginRight: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   placeholderAvatar: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: colors.background,
     justifyContent: "center",
     alignItems: "center",
     marginRight: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   commentAuthor: {
-    fontSize: typography.fontSize.sm,
-    fontWeight: "700",
+    fontSize: typography.fontSize.md,
+    fontWeight: "600",
     color: colors.text,
   },
   commentContent: {
     fontSize: typography.fontSize.sm,
     color: colors.text,
-    marginBottom: spacing.xs,
+    lineHeight: 20,
+    marginBottom: spacing.sm,
   },
   commentMedia: {
-    width: 100,
-    height: 100,
-    borderRadius: 8,
-    marginBottom: spacing.xs,
+    width: "100%",
+    height: 150,
+    borderRadius: 10,
+    marginBottom: spacing.sm,
   },
   commentTimestamp: {
     fontSize: typography.fontSize.xs,
     color: colors.textSecondary,
-    textAlign: "right",
+    opacity: 0.7,
   },
   emptyText: {
     fontSize: typography.fontSize.md,
@@ -451,22 +472,33 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
   },
   inputContainer: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
     padding: spacing.md,
-    borderTopWidth: 1,
-    borderColor: colors.background,
     backgroundColor: colors.white,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 5, // For Android shadow
   },
   mediaPreview: {
     flexDirection: "row",
     alignItems: "center",
     marginBottom: spacing.sm,
     backgroundColor: colors.background,
-    padding: spacing.xs,
-    borderRadius: 8,
+    padding: spacing.sm,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   previewImage: {
-    width: 90,
-    height: 60,
+    width: 80,
+    height: 80,
     borderRadius: 8,
     marginRight: spacing.sm,
   },
@@ -476,25 +508,26 @@ const styles = StyleSheet.create({
   inputRow: {
     flexDirection: "row",
     alignItems: "center",
+    backgroundColor: colors.background,
+    borderRadius: 25,
+    paddingHorizontal: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   mediaButton: {
     padding: spacing.sm,
   },
   textInput: {
     flex: 1,
-    backgroundColor: colors.background,
-    borderRadius: 20,
-    paddingHorizontal: spacing.md,
+    backgroundColor: "transparent",
+    paddingHorizontal: spacing.sm,
     paddingVertical: spacing.sm,
     fontSize: typography.fontSize.sm,
     color: colors.text,
-    borderWidth: 1,
-    borderColor: colors.border,
-    maxHeight: 100,
+    maxHeight: 120,
   },
   sendButton: {
     padding: spacing.sm,
-    marginLeft: spacing.sm,
   },
 });
 
