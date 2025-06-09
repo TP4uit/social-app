@@ -83,7 +83,7 @@ const OtherProfileScreen = ({ navigation, route }) => {
           profileService.fetchUserProfileById(userId),
           postsService.getPosts(),
         ]);
-        const profileData = profileResponse;
+        const profileData = profileResponse.user;
         // Filter posts by userId
         const userPosts = postsResponse.data.filter(
           (post) => post.author?._id === userId

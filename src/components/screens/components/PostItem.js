@@ -6,13 +6,19 @@ import UserAvatarName from "./UserAvatarName";
 import CommentModal from "./CommentModal";
 import { colors, spacing, typography } from "../../../theme";
 import { likePost } from "../../../redux/actions/postsActions";
-import { postsService } from "../../../api/posts";
+import {
+  fetchComments,
+  addComment,
+} from "../../../redux/actions/commentsActions";
 import { socketService } from "../../../api/socket";
 
 const PostItem = ({ post }) => {
   const dispatch = useDispatch();
-  const { user } = useSelector((state) => state.auth).user; // Keep as is
-  // console.log("Post from PostItem:", post);
+  const { user } = useSelector((state) => state.auth).user;
+  const comments = useSelector(
+    (state) => state.comments.commentsByPost[post._id] || []
+  );
+  console.log("Post from PostItem:", post);
 
   const { author, content, createdAt, likes, _id, images } = post;
   const shares = post.shares || 0;
@@ -25,55 +31,47 @@ const PostItem = ({ post }) => {
   );
   const [loading, setLoading] = useState(false);
   const [commentModalVisible, setCommentModalVisible] = useState(false);
-  const [comments, setComments] = useState([]);
   const [isFetchingComments, setIsFetchingComments] = useState(false);
 
-  // Fetch comments
-  const fetchComments = async () => {
-    setIsFetchingComments(true);
-    try {
-      const response = await postsService.fetchCommentOfPost(_id);
-      console.log("Fetched comments for post", _id, ":", response.data);
-      setComments(response.data || []);
-    } catch (error) {
-      console.error(
-        "Fetch comments error:",
-        error.message,
-        error.response?.data
-      );
-      alert("Failed to load comments");
-    } finally {
-      setIsFetchingComments(false);
-    }
-  };
-
-  // Initialize Socket.IO for real-time comments
+  // Initialize Socket.IO and fetch comments
   useEffect(() => {
     let socket = null;
     const initSocket = async () => {
+      if (!_id) {
+        console.error("Invalid post ID:", _id);
+        return;
+      }
+      setIsFetchingComments(true);
       try {
         socket = await socketService.connect();
         if (!socket || !socket.connected) {
-          console.error("Socket connection failed");
+          console.error("Socket connection failed in PostItem");
+          alert("Failed to connect to server for real-time comments");
           return;
         }
-        console.log("Socket connected for PostItem:", socket.id);
+        console.log("Socket connected in PostItem:", socket.id);
         socket.emit("join_post", _id);
         console.log(`Joined post room: ${_id}`);
 
         socket.on("new_comment", (comment) => {
           console.log("Received new comment:", comment);
-          setComments((prev) => [...prev, comment]);
+          dispatch(addComment(_id, comment));
         });
 
-        // Fetch initial comments
-        fetchComments();
+        // Fetch comments
+        await dispatch(fetchComments(_id));
+        console.log("Fetched comments for post", _id);
       } catch (error) {
-        console.error("Socket init error:", error);
+        console.error("Init error:", error.message, error.response?.data);
+        alert(`Failed to load comments: ${error.message}`);
+      } finally {
+        setIsFetchingComments(false);
       }
     };
 
-    initSocket();
+    if (_id) {
+      initSocket();
+    }
 
     return () => {
       if (socket) {
@@ -82,7 +80,7 @@ const PostItem = ({ post }) => {
         console.log(`Left post room: ${_id}`);
       }
     };
-  }, [_id]);
+  }, [_id, dispatch]);
 
   const formatTimestamp = (dateString) => {
     const now = new Date();
@@ -145,13 +143,18 @@ const PostItem = ({ post }) => {
     setCommentModalVisible(true);
   };
 
+  const handleCloseModal = () => {
+    setCommentModalVisible(false);
+    dispatch(fetchComments(_id)); // Sync comments
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.contentHeader}>
         <View style={styles.headerLeft}>
           <UserAvatarName userId={author?._id} />
         </View>
-        <TouchableOpacity style={styles.optionsButton}>
+        <TouchableOpacity style={styles.closeButton}>
           <Icon
             name="ellipsis-horizontal"
             size={20}
@@ -240,7 +243,7 @@ const PostItem = ({ post }) => {
 
       <CommentModal
         visible={commentModalVisible}
-        onClose={() => setCommentModalVisible(false)}
+        onClose={handleCloseModal}
         postId={post._id}
         postContent={content}
       />
@@ -266,7 +269,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
   },
-  optionsButton: {
+  closeButton: {
     padding: spacing.xs,
   },
   captionText: {
@@ -293,7 +296,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.md,
     borderTopWidth: 1,
-    borderBottomWidth: 1, // Fixed typo
+    borderBottomWidth: 1,
     borderColor: colors.border,
   },
   actionGroup: {

@@ -16,15 +16,22 @@ import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system";
 import Video from "react-native-video";
 import Icon from "react-native-vector-icons/Ionicons";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import { colors, spacing, typography } from "../../../theme";
 import { socketService } from "../../../api/socket";
 import { imageService } from "../../../api/imageService";
+import {
+  fetchComments,
+  addComment,
+} from "../../../redux/actions/commentsActions";
 import apiClient from "../../../api/client";
 
 const CommentModal = ({ visible, onClose, postId, postContent }) => {
+  const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
-  const [comments, setComments] = useState([]);
+  const comments = useSelector(
+    (state) => state.comments.commentsByPost[postId] || []
+  );
   const [commentText, setCommentText] = useState("");
   const [selectedMedia, setSelectedMedia] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -40,9 +47,11 @@ const CommentModal = ({ visible, onClose, postId, postContent }) => {
         Alert.alert("Error", "Failed to connect to server. Please log in.");
         return;
       }
+      console.log("Socket connected in CommentModal:", socket.current.id);
 
       socket.current.on("new_comment", (comment) => {
-        setComments((prev) => [...prev, comment]);
+        console.log("Received new comment:", comment);
+        dispatch(addComment(postId, comment));
         setTimeout(() => {
           flatListRef.current?.scrollToEnd({ animated: true });
         }, 100);
@@ -56,7 +65,7 @@ const CommentModal = ({ visible, onClose, postId, postContent }) => {
     return () => {
       socket.current?.off("new_comment");
     };
-  }, [visible]);
+  }, [visible, dispatch, postId]);
 
   // Join/leave post room and fetch comments
   useEffect(() => {
@@ -64,31 +73,28 @@ const CommentModal = ({ visible, onClose, postId, postContent }) => {
       socket.current.emit("join_post", postId);
       console.log(`Joined post room: ${postId}`);
 
-      fetchComments();
+      setIsFetching(true);
+      dispatch(fetchComments(postId))
+        .then(() => {
+          console.log("Fetched comments for post", postId);
+          setTimeout(() => {
+            flatListRef.current?.scrollToEnd({ animated: false });
+          }, 100);
+        })
+        .catch((error) => {
+          console.error("Fetch comments error:", error);
+          Alert.alert("Error", "Failed to load comments");
+        })
+        .finally(() => {
+          setIsFetching(false);
+        });
 
       return () => {
         socket.current?.emit("leave_post", postId);
         console.log(`Left post room: ${postId}`);
       };
     }
-  }, [visible, postId]);
-
-  const fetchComments = async () => {
-    setIsFetching(true);
-    try {
-      const response = await apiClient.get(`/comments/post/${postId}`);
-      console.log("commentList", response);
-      setComments(response.data || []);
-      setTimeout(() => {
-        flatListRef.current?.scrollToEnd({ animated: false });
-      }, 100);
-    } catch (error) {
-      console.error("Fetch comments error:", error);
-      Alert.alert("Error", "Failed to load comments");
-    } finally {
-      setIsFetching(false);
-    }
-  };
+  }, [visible, postId, dispatch]);
 
   const handlePickMedia = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -130,9 +136,7 @@ const CommentModal = ({ visible, onClose, postId, postContent }) => {
             ? "/files/upload-image"
             : "/files/upload-video";
 
-        const response = await apiClient.post(endpoint, {
-          file: mediaString,
-        });
+        const response = await apiClient.post(endpoint, { file: mediaString });
 
         return selectedMedia.type === "image"
           ? { imageUrl: response.data, videoUrl: null }
@@ -379,7 +383,7 @@ const styles = StyleSheet.create({
   inputContainer: {
     padding: spacing.md,
     borderTopWidth: 1,
-    borderTopColor: colors.border,
+    borderColor: colors.background,
     backgroundColor: colors.white,
   },
   mediaPreview: {
@@ -391,22 +395,22 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   previewImage: {
-    width: 50,
-    height: 50,
+    width: 90,
+    height: 60,
     borderRadius: 8,
     marginRight: spacing.sm,
   },
   clearMediaButton: {
     padding: spacing.xs,
   },
-  inputRow: {
+  inputView: {
     flexDirection: "row",
     alignItems: "center",
   },
   mediaButton: {
     padding: spacing.sm,
   },
-  textInput: {
+  textStyle: {
     flex: 1,
     backgroundColor: colors.background,
     borderRadius: 20,
