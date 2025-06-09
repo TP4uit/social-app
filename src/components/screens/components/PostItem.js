@@ -1,18 +1,20 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { View, Text, StyleSheet, Image, TouchableOpacity } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
 import Icon from "react-native-vector-icons/Ionicons";
 import UserAvatarName from "./UserAvatarName";
 import CommentModal from "./CommentModal";
-import { colors, spacing, typography } from "../../../theme"; // Restore imports
+import { colors, spacing, typography } from "../../../theme";
 import { likePost } from "../../../redux/actions/postsActions";
+import { postsService } from "../../../api/posts";
+import { socketService } from "../../../api/socket";
 
 const PostItem = ({ post }) => {
   const dispatch = useDispatch();
-  const { user } = useSelector((state) => state.auth).user;
-  console.log("User from PostItem:", { userId: user?._id, user }); // Debug auth state
+  const { user } = useSelector((state) => state.auth).user; // Keep as is
+  // console.log("Post from PostItem:", post);
 
-  const { author, content, createdAt, likes, comments, images } = post;
+  const { author, content, createdAt, likes, _id, images } = post;
   const shares = post.shares || 0;
   const saves = post.savedBy?.length || 0;
 
@@ -23,6 +25,64 @@ const PostItem = ({ post }) => {
   );
   const [loading, setLoading] = useState(false);
   const [commentModalVisible, setCommentModalVisible] = useState(false);
+  const [comments, setComments] = useState([]);
+  const [isFetchingComments, setIsFetchingComments] = useState(false);
+
+  // Fetch comments
+  const fetchComments = async () => {
+    setIsFetchingComments(true);
+    try {
+      const response = await postsService.fetchCommentOfPost(_id);
+      console.log("Fetched comments for post", _id, ":", response.data);
+      setComments(response.data || []);
+    } catch (error) {
+      console.error(
+        "Fetch comments error:",
+        error.message,
+        error.response?.data
+      );
+      alert("Failed to load comments");
+    } finally {
+      setIsFetchingComments(false);
+    }
+  };
+
+  // Initialize Socket.IO for real-time comments
+  useEffect(() => {
+    let socket = null;
+    const initSocket = async () => {
+      try {
+        socket = await socketService.connect();
+        if (!socket || !socket.connected) {
+          console.error("Socket connection failed");
+          return;
+        }
+        console.log("Socket connected for PostItem:", socket.id);
+        socket.emit("join_post", _id);
+        console.log(`Joined post room: ${_id}`);
+
+        socket.on("new_comment", (comment) => {
+          console.log("Received new comment:", comment);
+          setComments((prev) => [...prev, comment]);
+        });
+
+        // Fetch initial comments
+        fetchComments();
+      } catch (error) {
+        console.error("Socket init error:", error);
+      }
+    };
+
+    initSocket();
+
+    return () => {
+      if (socket) {
+        socket.emit("leave_post", _id);
+        socket.off("new_comment");
+        console.log(`Left post room: ${_id}`);
+      }
+    };
+  }, [_id]);
 
   const formatTimestamp = (dateString) => {
     const now = new Date();
@@ -233,7 +293,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.md,
     borderTopWidth: 1,
-    borderBottomWidth: colors.border,
+    borderBottomWidth: 1, // Fixed typo
+    borderColor: colors.border,
   },
   actionGroup: {
     flexDirection: "row",

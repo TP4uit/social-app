@@ -15,4 +15,8 @@ export const postsService = {
 
   commentOnPost: (id, comment) =>
     apiClient.post(`/posts/${id}/comments`, { content: comment }),
+
+  fetchCommentOfPost: (id) => {
+    return apiClient.get(`/comments/post/${id}`);
+  },
 };
