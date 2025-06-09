@@ -20,6 +20,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { colors, spacing, typography } from "../../../theme";
 import { socketService } from "../../../api/socket";
 import { imageService } from "../../../api/imageService";
+import { profileService } from "../../../api/profile";
 import {
   fetchComments,
   addComment,
@@ -36,6 +37,7 @@ const CommentModal = ({ visible, onClose, postId, postContent }) => {
   const [selectedMedia, setSelectedMedia] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
+  const [userProfiles, setUserProfiles] = useState({});
   const socket = useRef(null);
   const flatListRef = useRef(null);
 
@@ -52,6 +54,10 @@ const CommentModal = ({ visible, onClose, postId, postContent }) => {
       socket.current.on("new_comment", (comment) => {
         console.log("Received new comment:", comment);
         dispatch(addComment(postId, comment));
+        // Fetch profile for new comment's author if not cached
+        if (comment.author && !userProfiles[comment.author]) {
+          fetchUserProfile(comment.author);
+        }
         setTimeout(() => {
           flatListRef.current?.scrollToEnd({ animated: true });
         }, 100);
@@ -65,7 +71,27 @@ const CommentModal = ({ visible, onClose, postId, postContent }) => {
     return () => {
       socket.current?.off("new_comment");
     };
-  }, [visible, dispatch, postId]);
+  }, [visible, dispatch, postId, userProfiles]);
+
+  // Fetch user profile by ID and cache it
+  const fetchUserProfile = async (userId) => {
+    if (!userId || userProfiles[userId]) return;
+    try {
+      const { user: profile } = await profileService.fetchUserProfileById(
+        userId
+      );
+      setUserProfiles((prev) => ({
+        ...prev,
+        [userId]: profile,
+      }));
+    } catch (error) {
+      console.error(`Failed to fetch profile for user ${userId}:`, error);
+      setUserProfiles((prev) => ({
+        ...prev,
+        [userId]: { username: "Unknown User", avatar: "" },
+      }));
+    }
+  };
 
   // Join/leave post room and fetch comments
   useEffect(() => {
@@ -95,6 +121,14 @@ const CommentModal = ({ visible, onClose, postId, postContent }) => {
       };
     }
   }, [visible, postId, dispatch]);
+
+  // Fetch user profiles when comments change
+  useEffect(() => {
+    if (comments.length > 0) {
+      const uniqueAuthorIds = [...new Set(comments.map((c) => c.author))];
+      uniqueAuthorIds.forEach((authorId) => fetchUserProfile(authorId));
+    }
+  }, [comments]);
 
   const handlePickMedia = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -190,33 +224,50 @@ const CommentModal = ({ visible, onClose, postId, postContent }) => {
     setIsLoading(false);
   };
 
-  const renderComment = ({ item }) => (
-    <View
-      style={[
-        styles.commentContainer,
-        item.author._id === user?._id && styles.sentComment,
-      ]}
-    >
-      <Text style={styles.commentAuthor}>
-        {item.author.username || "Unknown User"}
-      </Text>
-      <Text style={styles.commentContent}>{item.content}</Text>
-      {item.imageUrl && (
-        <Image source={{ uri: item.imageUrl }} style={styles.commentMedia} />
-      )}
-      {item.videoUrl && (
-        <Video
-          source={{ uri: item.videoUrl }}
-          style={styles.commentMedia}
-          controls
-          resizeMode="contain"
-        />
-      )}
-      <Text style={styles.commentTimestamp}>
-        {new Date(item.createdAt).toLocaleTimeString()}
-      </Text>
-    </View>
-  );
+  const renderComment = ({ item }) => {
+    const profile = userProfiles[item.author] || {
+      username: "Loading...",
+      avatar: "",
+    };
+
+    return (
+      <View
+        style={[
+          styles.commentContainer,
+          item.author === user?._id && styles.sentComment,
+        ]}
+      >
+        <View style={styles.commentHeader}>
+          {profile.avatar ? (
+            <Image
+              source={{ uri: profile.avatar }}
+              style={styles.commentAvatar}
+            />
+          ) : (
+            <View style={styles.placeholderAvatar}>
+              <Icon name="person" size={20} color={colors.textSecondary} />
+            </View>
+          )}
+          <Text style={styles.commentAuthor}>{profile.username}</Text>
+        </View>
+        <Text style={styles.commentContent}>{item.content}</Text>
+        {item.imageUrl && (
+          <Image source={{ uri: item.imageUrl }} style={styles.commentMedia} />
+        )}
+        {item.videoUrl && (
+          <Video
+            source={{ uri: item.videoUrl }}
+            style={styles.commentMedia}
+            controls
+            resizeMode="contain"
+          />
+        )}
+        <Text style={styles.commentTimestamp}>
+          {new Date(item.createdAt).toLocaleTimeString()}
+        </Text>
+      </View>
+    );
+  };
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
@@ -352,11 +403,30 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryLight,
     alignSelf: "flex-end",
   },
+  commentHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: spacing.xs,
+  },
+  commentAvatar: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    marginRight: spacing.sm,
+  },
+  placeholderAvatar: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: colors.background,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: spacing.sm,
+  },
   commentAuthor: {
     fontSize: typography.fontSize.sm,
     fontWeight: "700",
     color: colors.text,
-    marginBottom: spacing.xs,
   },
   commentContent: {
     fontSize: typography.fontSize.sm,
@@ -403,14 +473,14 @@ const styles = StyleSheet.create({
   clearMediaButton: {
     padding: spacing.xs,
   },
-  inputView: {
+  inputRow: {
     flexDirection: "row",
     alignItems: "center",
   },
   mediaButton: {
     padding: spacing.sm,
   },
-  textStyle: {
+  textInput: {
     flex: 1,
     backgroundColor: colors.background,
     borderRadius: 20,
