@@ -16,11 +16,14 @@ import {
 import Icon from "react-native-vector-icons/Ionicons";
 import { useSelector, useDispatch } from "react-redux";
 import { colors, spacing, typography } from "../../theme";
-import chatApi from "../../api/chat";
 import * as ImagePicker from "expo-image-picker";
 import { socketService } from "../../api/socket";
 import { profileService } from "../../api/profile";
-import { addMessage, setMessages } from "../../redux/actions/chatActions";
+import {
+  addMessage,
+  setMessages,
+  fetchChatHistory,
+} from "../../redux/actions/chatActions";
 
 const DEFAULT_AVATAR_OTHER = "https://i.pravatar.cc/150?u=otherUser";
 const DEFAULT_AVATAR_CURRENT = "https://i.pravatar.cc/150?u=currentUser";
@@ -35,11 +38,11 @@ const GroupChatScreen = ({ route, navigation }) => {
   const messages = useSelector(
     (state) => state.chat.messagesByChat[chatId] || []
   );
-  const currentUser = useSelector((state) => state.auth.user);
+  const currentUser = useSelector((state) => state.auth.user.user);
   const [inputText, setInputText] = useState("");
   const [chatName, setChatName] = useState(initialChatName);
   const [chatAvatar, setChatAvatar] = useState(initialChatAvatar);
-  const [userProfiles, setUserProfiles] = useState({}); // Cache for other users' profiles
+  const [userProfiles, setUserProfiles] = useState({});
   const [error, setError] = useState(null);
   const flatListRef = useRef(null);
 
@@ -48,14 +51,19 @@ const GroupChatScreen = ({ route, navigation }) => {
     let socketCleanup = null;
 
     const initializeChat = async () => {
-      // Kiểm tra currentUser
+      // Check currentUser
       if (!currentUser?.id) {
         try {
           const { user } = await profileService.getCurrentUserProfile();
           dispatch({ type: "SET_USER", payload: user });
         } catch (err) {
+          console.error(
+            "Failed to load user profile:",
+            err.message,
+            err.response?.data
+          );
           Alert.alert("Error", "Please log in to continue");
-          navigation.navigate("Login"); // Điều hướng về màn hình đăng nhập
+          navigation.navigate("Login");
           return;
         }
       }
@@ -68,7 +76,7 @@ const GroupChatScreen = ({ route, navigation }) => {
         return;
       }
 
-      socketService.emit("join_chat", chatId); // Tham gia phòng chat
+      socketService.emit("join_chat", chatId);
       socketService.on("private_message", (msg) => {
         if (
           (msg.from === chatId && msg.to === currentUser?.id) ||
@@ -81,9 +89,9 @@ const GroupChatScreen = ({ route, navigation }) => {
                 `msg${Date.now()}${Math.random().toString(36).substr(2, 5)}`,
               from: msg.from,
               to: msg.to,
-              content: msg.content,
+              content: msg.content || "",
               type: msg.imageUrl ? "image" : "text",
-              imageUrl: msg.imageUrl,
+              imageUrl: msg.imageUrl || null,
               createdAt: msg.createdAt || new Date().toISOString(),
             })
           );
@@ -106,16 +114,25 @@ const GroupChatScreen = ({ route, navigation }) => {
       };
 
       try {
-        // Lấy lịch sử tin nhắn
-        const response = await chatApi.getChatHistory(chatId, currentUser.id);
-        dispatch(setMessages(chatId, response.data.messages));
+        // Fetch chat history using Redux action
+        console.log(
+          "Fetching chat history for chatId:",
+          chatId,
+          "userId:",
+          currentUser.id
+        );
+        await dispatch(fetchChatHistory(chatId, currentUser.id));
         setTimeout(
           () => flatListRef.current?.scrollToEnd({ animated: false }),
           100
         );
       } catch (error) {
-        console.error("Failed to load chat history:", error);
-        setError("Failed to load chat history.");
+        console.error("Failed to load chat history:", {
+          message: error.message,
+          response: error.response?.data,
+          status: error.response?.status,
+        });
+        setError("Failed to load chat history. Please try again.");
       }
 
       // Fetch partner profile if not provided
@@ -128,7 +145,11 @@ const GroupChatScreen = ({ route, navigation }) => {
           setChatAvatar(partner?.avatar || DEFAULT_AVATAR_OTHER);
           setUserProfiles((prev) => ({ ...prev, [chatId]: partner }));
         } catch (error) {
-          console.error("Failed to fetch partner profile:", error);
+          console.error(
+            "Failed to fetch partner profile:",
+            error.message,
+            error.response?.data
+          );
         }
       }
     };
@@ -155,7 +176,11 @@ const GroupChatScreen = ({ route, navigation }) => {
           const { user } = await profileService.fetchUserProfileById(userId);
           setUserProfiles((prev) => ({ ...prev, [userId]: user }));
         } catch (error) {
-          console.error(`Failed to fetch profile for user ${userId}:`, error);
+          console.error(
+            `Failed to fetch profile for user ${userId}:`,
+            error.message,
+            error.response?.data
+          );
         }
       }
     };
@@ -169,6 +194,7 @@ const GroupChatScreen = ({ route, navigation }) => {
     if (inputText.trim() === "" || !currentUser) return;
 
     const message = {
+      from: currentUser.id,
       to: chatId,
       content: inputText,
       imageUrl: null,
@@ -192,7 +218,11 @@ const GroupChatScreen = ({ route, navigation }) => {
         100
       );
     } catch (error) {
-      console.error("Failed to send message:", error);
+      console.error(
+        "Failed to send message:",
+        error.message,
+        error.response?.data
+      );
       setError("Failed to send message. Please try again.");
     }
   };
@@ -217,6 +247,7 @@ const GroupChatScreen = ({ route, navigation }) => {
         );
         if (imageUrl) {
           const message = {
+            from: currentUser.id,
             to: chatId,
             content: "",
             imageUrl,
@@ -234,14 +265,17 @@ const GroupChatScreen = ({ route, navigation }) => {
               createdAt: new Date().toISOString(),
             })
           );
-
           setTimeout(
             () => flatListRef.current?.scrollToEnd({ animated: true }),
             100
           );
         }
       } catch (error) {
-        console.error("Failed to upload image:", error);
+        console.error(
+          "Failed to upload image:",
+          error.message,
+          error.response?.data
+        );
         Alert.alert("Error", "Failed to upload image");
       }
     }
