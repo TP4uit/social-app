@@ -17,6 +17,7 @@ import Icon from "react-native-vector-icons/Ionicons";
 import { useSelector, useDispatch } from "react-redux";
 import { colors, spacing, typography } from "../../theme";
 import * as ImagePicker from "expo-image-picker";
+import * as FileSystem from "expo-file-system";
 import { socketService } from "../../api/socket";
 import { profileService } from "../../api/profile";
 import {
@@ -24,6 +25,8 @@ import {
   setMessages,
   fetchChatHistory,
 } from "../../redux/actions/chatActions";
+import { imageService } from "../../api/imageService";
+import apiClient from "../../api/client";
 
 const DEFAULT_AVATAR_OTHER = "https://i.pravatar.cc/150?u=otherUser";
 const DEFAULT_AVATAR_CURRENT = "https://i.pravatar.cc/150?u=currentUser";
@@ -44,14 +47,14 @@ const GroupChatScreen = ({ route, navigation }) => {
   const [chatAvatar, setChatAvatar] = useState(initialChatAvatar);
   const [userProfiles, setUserProfiles] = useState({});
   const [error, setError] = useState(null);
+  const [selectedImage, setSelectedImage] = useState(null);
+  const socket = useRef(null); // Use useRef to store socket instance
   const flatListRef = useRef(null);
 
   // Initialize Socket.IO and fetch chat data
   useEffect(() => {
-    let socketCleanup = null;
-
     const initializeChat = async () => {
-      if (!currentUser?.id) {
+      if (!currentUser?._id) {
         try {
           const { user } = await profileService.getCurrentUserProfile();
           dispatch({ type: "SET_USER", payload: user });
@@ -67,19 +70,19 @@ const GroupChatScreen = ({ route, navigation }) => {
         }
       }
 
-      const socket = await socketService.connect();
-      if (!socket) {
+      socket.current = await socketService.connect();
+      if (!socket.current) {
         setError(
           "Failed to connect to server. Messages may not update in real-time."
         );
         return;
       }
 
-      socketService.emit("join_chat", chatId);
-      socketService.on("private_message", (msg) => {
+      socket.current.emit("join_chat", chatId);
+      socket.current.on("private_message", (msg) => {
         if (
-          (msg.from === chatId && msg.to === currentUser?.id) ||
-          (msg.to === chatId && msg.from === currentUser?.id)
+          (msg.from === chatId && msg.to === currentUser?._id) ||
+          (msg.to === chatId && msg.from === currentUser?._id)
         ) {
           dispatch(
             addMessage(chatId, {
@@ -101,25 +104,19 @@ const GroupChatScreen = ({ route, navigation }) => {
         }
       });
 
-      socketService.on("message_error", ({ error }) => {
+      socket.current.on("message_error", ({ error }) => {
         console.error("Server failed to save message:", error);
         setError("Failed to send message. Please try again.");
       });
-
-      socketCleanup = () => {
-        socketService.emit("leave_chat", chatId);
-        socketService.off("private_message");
-        socketService.off("message_error");
-      };
 
       try {
         console.log(
           "Fetching chat history for chatId:",
           chatId,
           "userId:",
-          currentUser.id
+          currentUser._id
         );
-        await dispatch(fetchChatHistory(chatId, currentUser.id));
+        await dispatch(fetchChatHistory(chatId, currentUser._id));
         setTimeout(
           () => flatListRef.current?.scrollToEnd({ animated: false }),
           100
@@ -154,9 +151,13 @@ const GroupChatScreen = ({ route, navigation }) => {
     initializeChat();
 
     return () => {
-      if (socketCleanup) socketCleanup();
+      if (socket.current) {
+        socket.current.emit("leave_chat", chatId);
+        socket.current.off("private_message");
+        socket.current.off("message_error");
+      }
     };
-  }, [chatId, dispatch, initialChatName, currentUser?.id, navigation]);
+  }, [chatId, dispatch, initialChatName, currentUser?._id, navigation]);
 
   // Fetch user profiles for messages
   useEffect(() => {
@@ -165,7 +166,7 @@ const GroupChatScreen = ({ route, navigation }) => {
         ...new Set(
           messages
             .map((msg) => msg.from)
-            .filter((id) => id !== currentUser?.id && !userProfiles[id])
+            .filter((id) => id !== currentUser?._id && !userProfiles[id])
         ),
       ];
       for (const userId of uniqueUserIds) {
@@ -187,99 +188,115 @@ const GroupChatScreen = ({ route, navigation }) => {
     }
   }, [messages, currentUser, userProfiles]);
 
+  const handlePickImage = async () => {
+    try {
+      const { status } =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert("Permission Denied", "Please allow access to your photos.");
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        quality: 0.8,
+      });
+
+      if (!result.canceled) {
+        setSelectedImage(result.assets[0]);
+      }
+    } catch (error) {
+      console.error("Error picking image:", error.message);
+      Alert.alert("Error", "Failed to select image. Please try again.");
+    }
+  };
+
+  const clearImage = () => {
+    setSelectedImage(null);
+  };
+
+  const uploadImage = async () => {
+    if (!selectedImage) return { imageUrl: null };
+
+    if (selectedImage.uri.startsWith("file://")) {
+      try {
+        const fileInfo = await FileSystem.getInfoAsync(selectedImage.uri);
+        if (!fileInfo.exists) {
+          throw new Error("Selected image does not exist");
+        }
+
+        const mediaString = await imageService.getImageString(
+          selectedImage.uri
+        );
+        const response = await apiClient.post("/files/upload-image", {
+          file: mediaString,
+        });
+
+        return { imageUrl: response.data };
+      } catch (error) {
+        console.error("Upload image error:", error.message);
+        Alert.alert("Error", "Failed to upload image");
+        return { imageUrl: null };
+      }
+    }
+
+    return { imageUrl: selectedImage.uri };
+  };
+
   const handleSendMessage = async () => {
-    if (inputText.trim() === "" || !currentUser) return;
+    if (!inputText.trim() && !selectedImage) {
+      Alert.alert("Error", "Please enter a message or select an image.");
+      return;
+    }
+
+    if (!socket.current?.connected) {
+      Alert.alert("Error", "Not connected to server. Please try again.");
+      return;
+    }
+
+    let imageUrl = null;
+    if (selectedImage) {
+      const uploadResult = await uploadImage();
+      imageUrl = uploadResult.imageUrl;
+      if (!imageUrl) {
+        return;
+      }
+    }
 
     const message = {
-      from: currentUser.id,
+      from: currentUser._id,
       to: chatId,
       content: inputText,
-      imageUrl: null,
+      imageUrl,
     };
 
     try {
-      socketService.emit("private_message", message);
+      socket.current.emit("private_message", message);
       dispatch(
         addMessage(chatId, {
           _id: `msg${Date.now()}${Math.random().toString(36).substr(2, 5)}`,
-          from: currentUser.id,
+          from: currentUser._id,
           to: chatId,
           content: inputText,
-          type: "text",
+          type: imageUrl ? "image" : "text",
+          imageUrl,
           createdAt: new Date().toISOString(),
         })
       );
       setInputText("");
+      setSelectedImage(null);
       setTimeout(
         () => flatListRef.current?.scrollToEnd({ animated: true }),
         100
       );
     } catch (error) {
-      console.error(
-        "Failed to send message:",
-        error.message,
-        error.response?.data
-      );
-      setError("Failed to send message. Please try again.");
-    }
-  };
-
-  const handlePickImage = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== "granted") {
-      Alert.alert("Permission Denied", "Please allow access to your photos.");
-      return;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      quality: 0.8,
-    });
-
-    if (!result.canceled) {
-      try {
-        const imageUrl = await imageService.getImageString(
-          result.assets[0].uri
-        );
-        if (imageUrl) {
-          const message = {
-            from: currentUser.id,
-            to: chatId,
-            content: "",
-            imageUrl,
-          };
-
-          socketService.emit("private_message", message);
-          dispatch(
-            addMessage(chatId, {
-              _id: `msg${Date.now()}${Math.random().toString(36).substr(2, 5)}`,
-              from: currentUser.id,
-              to: chatId,
-              content: "",
-              type: "image",
-              imageUrl,
-              createdAt: new Date().toISOString(),
-            })
-          );
-          setTimeout(
-            () => flatListRef.current?.scrollToEnd({ animated: true }),
-            100
-          );
-        }
-      } catch (error) {
-        console.error(
-          "Failed to upload image:",
-          error.message,
-          error.response?.data
-        );
-        Alert.alert("Error", "Failed to upload image");
-      }
+      console.error("Failed to send message:", error.message);
+      Alert.alert("Error", "Failed to send message. Please try again.");
     }
   };
 
   const MessageItem = ({ item }) => {
-    console.log("message item", currentUser?._id);
     const isCurrentUser = item.from === currentUser?._id;
     const profile = isCurrentUser
       ? currentUser
@@ -382,27 +399,51 @@ const GroupChatScreen = ({ route, navigation }) => {
         />
 
         <View style={styles.inputContainer}>
-          <TouchableOpacity
-            onPress={handlePickImage}
-            style={styles.inputActionButton}
-          >
-            <Icon name="image-outline" size={24} color={colors.primary} />
-          </TouchableOpacity>
-          <TextInput
-            style={styles.inputText}
-            placeholder="Type a message..."
-            placeholderTextColor={colors.textSecondary}
-            value={inputText}
-            onChangeText={setInputText}
-            multiline
-          />
-          <TouchableOpacity
-            onPress={handleSendMessage}
-            style={[styles.inputActionButton, styles.sendButton]}
-            disabled={inputText.trim() === ""}
-          >
-            <Icon name="send" size={24} color={colors.white} />
-          </TouchableOpacity>
+          {selectedImage && (
+            <View style={styles.mediaPreview}>
+              <Image
+                source={{ uri: selectedImage.uri }}
+                style={styles.previewImage}
+              />
+              <TouchableOpacity
+                onPress={clearImage}
+                style={styles.clearMediaButton}
+              >
+                <Icon name="close-circle" size={20} color={colors.error} />
+              </TouchableOpacity>
+            </View>
+          )}
+          <View style={styles.inputRow}>
+            <TouchableOpacity
+              onPress={handlePickImage}
+              style={styles.inputActionButton}
+            >
+              <Icon name="image-outline" size={24} color={colors.primary} />
+            </TouchableOpacity>
+            <TextInput
+              style={styles.inputText}
+              placeholder="Type a message..."
+              placeholderTextColor={colors.textSecondary}
+              value={inputText}
+              onChangeText={setInputText}
+              multiline
+            />
+            <TouchableOpacity
+              onPress={handleSendMessage}
+              style={[styles.inputActionButton, styles.sendButton]}
+              disabled={inputText.trim() === "" && !selectedImage}
+            >
+              <Icon
+                name="send"
+                size={24}
+                color={
+                  inputText.trim() === "" && !selectedImage
+                    ? colors.textSecondary
+                    : colors.white
+                }
+              />
+            </TouchableOpacity>
+          </View>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -466,21 +507,21 @@ const styles = StyleSheet.create({
   },
   currentUserMessageRow: {
     alignSelf: "flex-end",
-    flexDirection: "row-reverse", // Reverse for avatar on left
+    flexDirection: "row-reverse",
   },
   otherUserMessageRow: {
     alignSelf: "flex-start",
   },
   messageContainer: {
     flex: 1,
-    maxWidth: "75%", // Reduced to accommodate avatar
+    maxWidth: "75%",
   },
   messageAvatar: {
     width: 36,
     height: 36,
     borderRadius: 18,
     marginHorizontal: spacing.xs,
-    marginTop: spacing.xs, // Align with top of bubble
+    marginTop: spacing.xs,
   },
   messageBubble: {
     paddingVertical: spacing.sm,
@@ -493,12 +534,12 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   currentUserBubble: {
-    backgroundColor: "#4CAF50", // Green
+    backgroundColor: "#4CAF50",
     borderBottomLeftRadius: 18,
     borderBottomRightRadius: 4,
   },
   otherUserBubble: {
-    backgroundColor: colors.background, // Light gray
+    backgroundColor: colors.background,
     borderBottomLeftRadius: 4,
     borderBottomRightRadius: 18,
   },
@@ -510,11 +551,11 @@ const styles = StyleSheet.create({
   },
   messageText: {
     fontSize: typography.fontSize.md,
-    color: colors.text, // Black for others
+    color: colors.text,
     lineHeight: typography.fontSize.md * 1.4,
   },
   currentUserMessageText: {
-    color: colors.white, // White for current user
+    color: colors.white,
   },
   messageImage: {
     width: 200,
@@ -529,34 +570,54 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs / 2,
   },
   inputContainer: {
-    flexDirection: "row",
-    alignItems: "center",
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.sm,
     borderTopWidth: 1,
     borderTopColor: colors.border,
     backgroundColor: colors.white,
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
     shadowColor: colors.black,
     shadowOffset: { width: 0, height: -1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
     elevation: 2,
   },
+  mediaPreview: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: spacing.sm,
+    backgroundColor: colors.background,
+    padding: spacing.sm,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  previewImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+    marginRight: spacing.sm,
+  },
+  clearMediaButton: {
+    padding: spacing.xs,
+  },
+  inputRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: colors.background,
+    borderRadius: 25,
+    paddingHorizontal: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
   inputText: {
     flex: 1,
     minHeight: 40,
     maxHeight: 120,
-    backgroundColor: colors.background,
-    borderRadius: 20,
+    backgroundColor: "transparent",
     paddingHorizontal: spacing.md,
     paddingVertical: Platform.OS === "ios" ? spacing.sm : spacing.xs - 2,
     fontSize: typography.fontSize.md,
     color: colors.text,
-    marginHorizontal: spacing.xs,
   },
   inputActionButton: {
     paddingHorizontal: spacing.sm,

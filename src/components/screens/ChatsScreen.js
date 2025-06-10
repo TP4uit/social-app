@@ -72,13 +72,13 @@ const ChatsScreen = ({ navigation }) => {
         // Lọc người dùng hiện tại và ánh xạ dữ liệu
         const userData = response.data
           .filter((user) => {
-            if (!currentUser?.id) {
+            if (!currentUser?._id) {
               console.warn(
                 "Current user ID is not available, including all users"
               );
               return true; // Nếu không có currentUser.id, giữ tất cả để tránh lỗi
             }
-            const isExcluded = user._id !== currentUser.id;
+            const isExcluded = user._id !== currentUser._id;
             if (!isExcluded) {
               console.log(`Excluding current user with ID: ${user._id}`);
             }
