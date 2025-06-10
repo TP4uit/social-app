@@ -227,7 +227,7 @@ const PostItem = ({ post }) => {
           <View style={styles.commentSection}>
             <Text style={styles.commentPreview} numberOfLines={1}>
               <Text style={styles.commentAuthor}>
-                {comments[0].author?.username || "Unknown User"}{" "}
+                {comments[0].author?.username || "alibaba"}{" "}
               </Text>
               {comments[0].content}
             </Text>

@@ -1,7 +1,7 @@
 import { io } from "socket.io-client";
 import { getAuthToken } from "../utils/auth";
 
-const SOCKET_URL = "http://localhost:3000";
+const SOCKET_URL = "http://192.168.79.239:3000";
 
 const socketService = {
   socket: null,

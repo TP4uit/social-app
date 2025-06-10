@@ -14,6 +14,7 @@ import {
   ActivityIndicator,
   Alert,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useDispatch, useSelector } from "react-redux";
 import {
   createPost as createPostAction,
@@ -38,6 +39,7 @@ const CreatePostScreen = ({ navigation }) => {
   const dispatch = useDispatch();
   const { creating, createError } = useSelector((state) => state.posts || {});
   const { user } = useAuth();
+  const insets = useSafeAreaInsets(); // Get safe area insets for mobile
 
   const currentUserAvatar = user?.avatar || DEFAULT_AVATAR;
 
@@ -51,31 +53,41 @@ const CreatePostScreen = ({ navigation }) => {
   };
 
   const handleImagePick = async () => {
-    // Request permission on mobile only
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== "granted") {
-      Alert.alert(
-        "Permission Denied",
-        "Please allow access to your photos to upload an image."
-      );
-      return;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1], // Match EditProfileScreen's avatar aspect ratio
-      quality: 0.8,
-    });
-
-    if (!result.canceled && result.assets && result.assets[0]?.uri) {
-      console.log("Selected image URI:", result.assets[0].uri); // Debug log
-      setImageUri(result.assets[0].uri); // Store URI in state, as in EditProfileScreen
-      if (contentError && (content.trim() || result.assets[0].uri)) {
-        setContentError("");
+    try {
+      const { status } =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert(
+          "Permission Denied",
+          "Please allow access to your photos to upload an image."
+        );
+        return;
       }
-    } else {
-      console.log("Image picker result:", result); // Debug log for failures
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets && result.assets[0]?.uri) {
+        const uri = result.assets[0].uri;
+        console.log("Selected image URI:", uri);
+        const fileInfo = await FileSystem.getInfoAsync(uri);
+        if (!fileInfo.exists) {
+          throw new Error("Selected image does not exist");
+        }
+        setImageUri(uri);
+        if (contentError && (content.trim() || uri)) {
+          setContentError("");
+        }
+      } else {
+        console.log("Image picker cancelled or failed:", result);
+      }
+    } catch (error) {
+      console.error("Image pick error:", error);
+      Alert.alert("Error", "Failed to pick image: " + error.message);
     }
   };
 
@@ -130,7 +142,6 @@ const CreatePostScreen = ({ navigation }) => {
       setContent("");
       setImageUri(null);
 
-      // Dispatch fetchPosts to refresh posts from the server
       await dispatch(fetchPosts());
 
       console.log("Navigating to Feed tab");
@@ -144,7 +155,7 @@ const CreatePostScreen = ({ navigation }) => {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, { paddingTop: insets.top }]}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.white} />
       <View style={styles.header}>
         <TouchableOpacity
@@ -184,10 +195,10 @@ const CreatePostScreen = ({ navigation }) => {
       </View>
 
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={styles.keyboardAvoid}
         keyboardVerticalOffset={
-          Platform.OS === "ios" ? 0 : -StatusBar.currentHeight || 0
+          Platform.OS === "ios" ? insets.top : StatusBar.currentHeight || 0
         }
       >
         <ScrollView
@@ -199,6 +210,9 @@ const CreatePostScreen = ({ navigation }) => {
               <Image
                 source={{ uri: currentUserAvatar }}
                 style={styles.avatar}
+                onError={(e) =>
+                  console.error("Avatar load error:", e.nativeEvent.error)
+                }
               />
               <Text style={styles.username}>
                 {user?.username || "Unknown User"}
@@ -215,11 +229,20 @@ const CreatePostScreen = ({ navigation }) => {
               }}
               multiline
               style={styles.textStyle}
-              maxHeight={200}
+              textAlignVertical="top"
+              minHeight={100}
             />
-            {imageUri && (
+            {imageUri ? (
               <View style={styles.imageContainer}>
-                <Image source={{ uri: imageUri }} style={styles.previewImage} />
+                <Image
+                  source={{ uri: imageUri }}
+                  style={styles.previewImage}
+                  onError={(e) => {
+                    console.error("Image load error:", e.nativeEvent.error);
+                    setContentError("Failed to load image");
+                    setImageUri(null);
+                  }}
+                />
                 {isUploadingImage && (
                   <View style={styles.imageLoading}>
                     <ActivityIndicator size="large" color={colors.white} />
@@ -233,7 +256,7 @@ const CreatePostScreen = ({ navigation }) => {
                   <Icon name="close-circle" size={24} color={colors.white} />
                 </TouchableOpacity>
               </View>
-            )}
+            ) : null}
             {contentError && (
               <Text style={styles.errorText}>{contentError}</Text>
             )}
@@ -270,7 +293,7 @@ const CreatePostScreen = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
     backgroundColor: colors.background,
   },
@@ -288,6 +311,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
+    zIndex: 1000,
   },
   headerButton: {
     padding: spacing.sm,
@@ -319,6 +343,7 @@ const styles = StyleSheet.create({
   scrollContentContainer: {
     flexGrow: 1,
     padding: spacing.md,
+    paddingBottom: spacing.lg + (Platform.OS === "ios" ? 20 : 0),
   },
   cardContainer: {
     backgroundColor: colors.white,
@@ -356,6 +381,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: spacing.sm,
     lineHeight: typography.fontSize.md * 1.5,
+    minHeight: 100,
   },
   errorText: {
     color: colors.error,
