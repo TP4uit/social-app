@@ -1,5 +1,5 @@
 // src/components/screens/AccountSelectionScreen.js
-import React from 'react';
+import React from "react";
 import {
   View,
   Text,
@@ -8,27 +8,27 @@ import {
   Image,
   SafeAreaView,
   StatusBar,
-  Platform, // Đã thêm ở bước trước
-} from 'react-native';
-import { colors, spacing, typography } from '../../theme';
+  Platform,
+} from "react-native";
+import { colors, spacing, typography } from "../../theme";
 
-const PLACEHOLDER_AVATAR = 'https://i.pravatar.cc/150?u=sophia.wright';
+const PLACEHOLDER_AVATAR = "https://i.pravatar.cc/150?u=sophia.wright";
 
 const AccountSelectionScreen = ({ navigation }) => {
   const user = {
     avatar: PLACEHOLDER_AVATAR,
-    username: 'sophia.wright',
-    accountType: 'Regular account',
+    username: "sophia.wright",
+    accountType: "Regular account",
   };
 
   const handleLogin = () => {
     // Sửa ở đây:
-    navigation.navigate('LoginForm');
+    navigation.navigate("LoginForm");
   };
 
   const handleSwitchAccounts = () => {
     // Sửa ở đây:
-    navigation.navigate('LoginForm');
+    navigation.navigate("LoginForm");
   };
 
   return (
@@ -47,7 +47,8 @@ const AccountSelectionScreen = ({ navigation }) => {
 
         <TouchableOpacity
           style={styles.switchAccountButton}
-          onPress={handleSwitchAccounts}>
+          onPress={handleSwitchAccounts}
+        >
           <Text style={styles.switchAccountButtonText}>Switch Accounts</Text>
         </TouchableOpacity>
       </View>
@@ -55,7 +56,7 @@ const AccountSelectionScreen = ({ navigation }) => {
       <View style={styles.footer}>
         <Text style={styles.noAccountText}>Don't have an account? </Text>
         {/* Đảm bảo tên màn hình 'Register' là chính xác */}
-        <TouchableOpacity onPress={() => navigation.navigate('Register')}>
+        <TouchableOpacity onPress={() => navigation.navigate("Register")}>
           <Text style={styles.signupText}>Sign up.</Text>
         </TouchableOpacity>
       </View>
@@ -71,16 +72,16 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     paddingHorizontal: spacing.xl,
   },
   appName: {
     fontSize: typography.fontSize.xxl + 8,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     color: colors.black,
     marginBottom: spacing.xl + 10,
-    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif-medium',
+    fontFamily: Platform.OS === "ios" ? "System" : "sans-serif-medium",
   },
   profileImage: {
     width: 120,
@@ -90,7 +91,7 @@ const styles = StyleSheet.create({
   },
   username: {
     fontSize: typography.fontSize.xl,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     color: colors.black,
     marginBottom: spacing.xs,
   },
@@ -104,36 +105,36 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
     borderRadius: 8,
-    width: '100%',
-    alignItems: 'center',
+    width: "100%",
+    alignItems: "center",
     marginBottom: spacing.md,
   },
   loginButtonText: {
     color: colors.white,
     fontSize: typography.fontSize.md,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   switchAccountButton: {
-    backgroundColor: '#EFEFF4',
+    backgroundColor: "#EFEFF4",
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
     borderRadius: 8,
-    width: '100%',
-    alignItems: 'center',
+    width: "100%",
+    alignItems: "center",
     marginBottom: spacing.xxl,
   },
   switchAccountButtonText: {
     color: colors.primary,
     fontSize: typography.fontSize.md,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   footer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
     paddingVertical: spacing.lg,
-    width: '100%',
-    position: 'absolute',
+    width: "100%",
+    position: "absolute",
     bottom: 0,
     backgroundColor: colors.white,
   },
@@ -144,7 +145,7 @@ const styles = StyleSheet.create({
   signupText: {
     fontSize: typography.fontSize.sm,
     color: colors.primary,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
 });
 

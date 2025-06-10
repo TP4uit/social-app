@@ -51,7 +51,6 @@ const GroupChatScreen = ({ route, navigation }) => {
     let socketCleanup = null;
 
     const initializeChat = async () => {
-      // Check currentUser
       if (!currentUser?.id) {
         try {
           const { user } = await profileService.getCurrentUserProfile();
@@ -114,7 +113,6 @@ const GroupChatScreen = ({ route, navigation }) => {
       };
 
       try {
-        // Fetch chat history using Redux action
         console.log(
           "Fetching chat history for chatId:",
           chatId,
@@ -135,7 +133,6 @@ const GroupChatScreen = ({ route, navigation }) => {
         setError("Failed to load chat history. Please try again.");
       }
 
-      // Fetch partner profile if not provided
       if (!initialChatName) {
         try {
           const { user: partner } = await profileService.fetchUserProfileById(
@@ -282,7 +279,8 @@ const GroupChatScreen = ({ route, navigation }) => {
   };
 
   const MessageItem = ({ item }) => {
-    const isCurrentUser = item.from === currentUser?.id;
+    console.log("message item", currentUser?._id);
+    const isCurrentUser = item.from === currentUser?._id;
     const profile = isCurrentUser
       ? currentUser
       : userProfiles[item.from] || {
@@ -299,51 +297,42 @@ const GroupChatScreen = ({ route, navigation }) => {
             : styles.otherUserMessageRow,
         ]}
       >
-        {!isCurrentUser && (
-          <Image
-            source={{ uri: profile.avatar }}
-            style={styles.messageAvatar}
-          />
-        )}
-        <View
-          style={[
-            styles.messageBubble,
-            isCurrentUser ? styles.currentUserBubble : styles.otherUserBubble,
-          ]}
-        >
+        <Image source={{ uri: profile.avatar }} style={styles.messageAvatar} />
+        <View style={styles.messageContainer}>
           {!isCurrentUser && (
             <Text style={styles.senderName}>{profile.username}</Text>
           )}
-          {item.content && (
-            <Text
-              style={[
-                styles.messageText,
-                isCurrentUser && styles.currentUserMessageText,
-              ]}
-            >
-              {item.content}
+          <View
+            style={[
+              styles.messageBubble,
+              isCurrentUser ? styles.currentUserBubble : styles.otherUserBubble,
+            ]}
+          >
+            {item.content && (
+              <Text
+                style={[
+                  styles.messageText,
+                  isCurrentUser && styles.currentUserMessageText,
+                ]}
+              >
+                {item.content}
+              </Text>
+            )}
+            {item.imageUrl && (
+              <Image
+                source={{ uri: item.imageUrl }}
+                style={styles.messageImage}
+                resizeMode="cover"
+              />
+            )}
+            <Text style={styles.timestampText}>
+              {new Date(item.createdAt).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
             </Text>
-          )}
-          {item.imageUrl && (
-            <Image
-              source={{ uri: item.imageUrl }}
-              style={styles.messageImage}
-              resizeMode="cover"
-            />
-          )}
-          <Text style={styles.timestampText}>
-            {new Date(item.createdAt).toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-            })}
-          </Text>
+          </View>
         </View>
-        {isCurrentUser && (
-          <Image
-            source={{ uri: profile.avatar }}
-            style={styles.messageAvatar}
-          />
-        )}
       </View>
     );
   };
@@ -473,27 +462,30 @@ const styles = StyleSheet.create({
   messageRow: {
     flexDirection: "row",
     marginVertical: spacing.xs,
-    maxWidth: "80%",
+    alignItems: "flex-start",
   },
   currentUserMessageRow: {
     alignSelf: "flex-end",
-    justifyContent: "flex-end",
+    flexDirection: "row-reverse", // Reverse for avatar on left
   },
   otherUserMessageRow: {
     alignSelf: "flex-start",
   },
+  messageContainer: {
+    flex: 1,
+    maxWidth: "75%", // Reduced to accommodate avatar
+  },
   messageAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     marginHorizontal: spacing.xs,
-    alignSelf: "flex-end",
+    marginTop: spacing.xs, // Align with top of bubble
   },
   messageBubble: {
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
     borderRadius: 18,
-    minWidth: 50,
     shadowColor: colors.black,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
@@ -501,12 +493,14 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   currentUserBubble: {
-    backgroundColor: colors.primary,
+    backgroundColor: "#4CAF50", // Green
+    borderBottomLeftRadius: 18,
     borderBottomRightRadius: 4,
   },
   otherUserBubble: {
-    backgroundColor: colors.background,
+    backgroundColor: colors.background, // Light gray
     borderBottomLeftRadius: 4,
+    borderBottomRightRadius: 18,
   },
   senderName: {
     fontSize: typography.fontSize.xs,
@@ -516,11 +510,11 @@ const styles = StyleSheet.create({
   },
   messageText: {
     fontSize: typography.fontSize.md,
-    color: colors.text,
+    color: colors.text, // Black for others
     lineHeight: typography.fontSize.md * 1.4,
   },
   currentUserMessageText: {
-    color: colors.white,
+    color: colors.white, // White for current user
   },
   messageImage: {
     width: 200,

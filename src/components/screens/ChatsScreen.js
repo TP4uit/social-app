@@ -23,7 +23,7 @@ const ChatsScreen = ({ navigation }) => {
   const [searchText, setSearchText] = useState("");
   const [users, setUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
-  const currentUser = useSelector((state) => state.auth.user);
+  const currentUser = useSelector((state) => state.auth.user.user);
 
   useEffect(() => {
     let socketCleanup = null;
