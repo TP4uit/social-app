@@ -200,6 +200,12 @@ const CommunityScreen = ({ navigation }) => {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.white} />
       <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.headerIconContainer}
+          onPress={() => navigation.navigate("Main")}
+        >
+          <Icon name="arrow-back" size={28} color={colors.text} />
+        </TouchableOpacity>
         <Text style={styles.headerTitle}>Communities</Text>
         <TouchableOpacity
           style={styles.headerIconContainer}
@@ -298,11 +304,12 @@ const CommunityScreen = ({ navigation }) => {
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[
-                  styles.privacyButton,
-                  newCommunity.privacy === "private" &&
-                    styles.privacyButtonActive,
-                ]}
+                style={{
+                  ...styles.privacyButton,
+                  ...(newCommunity.privacy === "private"
+                    ? styles.privacyButtonActive
+                    : {}),
+                }}
                 onPress={() =>
                   setNewCommunity({ ...newCommunity, privacy: "private" })
                 }
